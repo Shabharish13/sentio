@@ -1,0 +1,11 @@
+priority,keywords,points,stakeholder
+1,vp of customer success|vp customer success|head of customer success,20,champion
+2,director of customer success|director customer success|director of cs,18,champion
+3,cs ops|customer success operations|customer success ops|cs operations,17,champion
+4,chief revenue officer|cro,15,economic_buyer
+5,chief financial officer|cfo|vp finance|vp of finance|vice president of finance,12,economic_buyer
+6,chief technology officer|cto|vp engineering|vp of engineering|head of it,0,technical
+7,founder|chief executive officer|ceo,0,combined
+8,customer success manager|cs manager|cs lead|customer success lead,8,end_user
+9,senior csm|sr csm|senior customer success,3,end_user
+10,account executive|sdr|csm|sales development,3,end_user
