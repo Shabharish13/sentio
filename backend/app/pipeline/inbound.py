@@ -14,7 +14,7 @@ from app.pipeline.models import PipelineResult
 from app.scoring.engine import score_lead
 
 
-def _handoff_note(lead, score, research, email_body: str) -> str:
+def _handoff_note(score, research, email_body: str) -> str:
     return (
         f"SDR hand-off — persona: {score.fit.stakeholder}; "
         f"ICP: {score.fit.grade}/{score.fit.score}; "
@@ -60,7 +60,7 @@ def run_inbound_pipeline(form: dict, *, apollo, llm, tavily, hubspot) -> Pipelin
         problem_stated=form.get("problem_stated") or "",
     )
     email_body = write_email(brief, llm=llm)
-    note = _handoff_note(lead, score, research, email_body)
+    note = _handoff_note(score, research, email_body)
     crm = sync_to_crm(email=email, contact_props=props, deal_name=name,
                       route="qualified", note_body=note, hubspot=hubspot)
     return PipelineResult(
