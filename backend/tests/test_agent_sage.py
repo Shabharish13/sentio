@@ -35,7 +35,7 @@ def test_grounded_answer_when_confident():
 
 
 def test_escalates_when_top_score_below_threshold():
-    chunks = [Chunk("vaguely related", "faq-objections.md", 0.40)]
+    chunks = [Chunk("vaguely related", "faq-objections.md", 0.20)]
     llm = StubLLM("should not be called")
     resp = answer("do you integrate with SAP S/4HANA?", page="/pricing",
                   llm=llm, retriever=StubRetriever(chunks))
