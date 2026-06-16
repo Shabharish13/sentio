@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 
+import httpx
+
 from app.agents.models import ResearchBrief
 from app.clients.anthropic_client import load_prompt
 from app.clients.tavily_client import TavilyBudgetError
@@ -52,7 +54,9 @@ def run_research(record: dict, llm, tavily, max_searches: int = 3) -> ResearchBr
             query = action.get("query", "")
             try:
                 results = tavily.search(query)
-            except TavilyBudgetError:
+            except (TavilyBudgetError, httpx.HTTPError):
+                # Search failure must not abort research — degrade to no results
+                # so the agent falls back to enrichment-only signal mining.
                 results = {"results": []}
             searches.append({"query": query, "results": results})
             continue

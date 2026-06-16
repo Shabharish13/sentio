@@ -17,3 +17,13 @@ class PipelineResult:
     email_draft: str | None
     disqualification_reason: str | None
     crm: CrmResult
+    # Display fields for the Lead Brief UI (best-effort from enrichment).
+    source_url: str | None = None
+    contact_name: str = ""
+    contact_title: str = ""
+    contact_email: str = ""
+    company_name: str = ""
+    headcount: int | None = None
+    industry: str | None = None
+    revenue: str | None = None
+    enriched: bool = False

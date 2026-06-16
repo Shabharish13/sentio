@@ -51,7 +51,7 @@ Legend: `[x]` done · `[ ]` to do · `[~]` partial / build delta
 - [x] **CRM Agent** — HubSpot upsert, stage-by-outcome, mandatory notes (qualified + disqualified) (`app/agents/crm.py`)
 - [x] **Sage Agent** — RAG-grounded chat: KB retrieval + confidence-gated escalation (threshold recalibrated to 0.35 for MiniLM) (`app/agents/sage.py`)
   - [x] RAG setup: ChromaDB default MiniLM (all-MiniLM-L6-v2, no torch) over `kb/*.md` (`app/rag/store.py` + `scripts/build_kb_index.py`)
-  - [~] Post-email-capture hook (on Book → enrich → score → research → CRM) + chat-path outcome routing — *deferred to the chat-orchestration layer*
+  - [x] Post-email-capture hook (on Book → enrich → score → research → CRM) + chat-path outcome routing — *built in Phase 5 (`app/chat/orchestrator.py`)*
 - [x] Tests: each agent against stub fixtures; correct branching, no real network/LLM in unit suite
 
 ## Phase 4 — Inbound pipeline orchestration
@@ -63,24 +63,29 @@ Legend: `[x]` done · `[ ]` to do · `[~]` partial / build delta
 
 ## Phase 5 — API surface
 
-- [ ] `POST /demo` — runs inbound pipeline, returns lead brief
-- [ ] `POST /chat` — drives Sage turn-by-turn, maintains server-side qualification state
-- [ ] Error handling + graceful fallbacks (enrichment miss, search fail, HubSpot down)
+- [x] `POST /demo` — runs inbound pipeline, returns Lead Brief (`app/api/routes.py`, `schemas.py`)
+- [x] `POST /chat` — drives Sage turn-by-turn, server-side qualification state + outcome routing (`app/chat/`: `session.py`, `outcome.py`, `orchestrator.py`)
+  - Book → synthesizes a form, runs the same enrich→score→research→CRM pipeline, attaches the chat transcript as a deal note
+  - Disqualify (with email) → disqualified-stage deal + mandatory reason note; without email → warm close, no CRM
+- [x] Error handling + graceful fallbacks: exit-check → 400, provider failure → 502, Tavily search-fail degrades to no-results, chat CRM errors swallowed (reply always returned). CORS for the Next.js dev origin.
+- [x] Tests: `test_chat_session.py`, `test_chat_outcome.py`, `test_chat_orchestrator.py`, `test_api.py` (TestClient + dependency overrides). Full suite 98 passing.
 
 ---
 
 ## Phase 6 — Website (Next.js)
 
-- [ ] Scaffold Next.js app (fresh — `archive/frontend` is superseded, do not reuse)
-- [ ] Pages from `website-copy.md`: Home, Product, Pricing, Case Studies, Demo
-- [ ] Demo form → `POST /demo`; render Lead Brief result state
-- [ ] Deploy target (Vercel)
+- [x] Scaffold fresh Next.js 16 app (App Router, TS, Tailwind v4) in `frontend/`
+- [x] Pages from `website-copy.md`: Home, Product, Pricing, Case Studies, Demo (copy in `src/lib/sentio.ts`)
+- [x] Demo form → `POST /demo` (`src/app/demo/page.tsx`); renders Lead Brief result state (scorecard, contact/company panels, research signal, draft email, HubSpot ref)
+- [x] `next build` clean — all 6 routes prerender; all pages serve 200 in dev
+- [ ] Deploy to Vercel — *not run (set `NEXT_PUBLIC_API_BASE` to the deployed backend)*
 
 ## Phase 7 — Chat widget (Sage)
 
-- [ ] Widget component wired to `POST /chat`
-- [ ] Mount on **all pages**, pass current page at init (page-aware intent)
-- [ ] Outcome UX: book confirmation, escalation, nurture resource, warm disqualify
+- [x] Widget component wired to `POST /chat` (`src/components/SageWidget.tsx`), threads `session_id`
+- [x] Mounted on **all pages** via `layout.tsx`, passes current `pathname` as page (page-aware); auto-opens after 5s on `/pricing` + `/demo`
+- [x] Outcome UX: book confirmation, escalation hand-off, nurture resource note, warm disqualify; connection-error fallback string
+- [x] End-to-end verified: live `/chat` returns a grounded answer citing real KB sources; site renders with widget mounted
 
 ## Phase 8 — Deliverables
 
@@ -94,5 +99,5 @@ Legend: `[x]` done · `[ ]` to do · `[~]` partial / build delta
 ## Open items / blockers
 
 - [x] **Disqualified stage** — created (`3840698071`, "Agent Disqualified"). Pipeline is `default` (the `246500414` in old docs was the portal id, now corrected everywhere).
-- [ ] `CLAUDE.md` line 25 still says widget on `/pricing` + `/demo` — update to "all pages" if desired (minor)
+- [x] Widget reconciled: mounted on **all pages** (per Solution-Design-Document), auto-opens after 5s only on `/pricing` + `/demo` (per website-copy)
 - [ ] Confirm Apollo + Tavily + HubSpot free-tier limits are enough for the demo

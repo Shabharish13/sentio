@@ -1,0 +1,49 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg: #ffffff;
+  --color-surface: #f8fafc;
+  --color-surface-2: #f1f5f9;
+  --color-ink: #0f172a;
+  --color-muted: #475569;
+  --color-faint: #94a3b8;
+  --color-line: #e2e8f0;
+
+  --color-brand: #4338ca;
+  --color-brand-dark: #3730a3;
+  --color-brand-soft: #eef2ff;
+
+  --color-health: #059669;
+  --color-risk: #d97706;
+
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+@layer components {
+  .container-x {
+    @apply mx-auto w-full max-w-6xl px-6;
+  }
+  .btn-primary {
+    @apply inline-flex items-center justify-center rounded-lg bg-brand px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-dark;
+  }
+  .btn-ghost {
+    @apply inline-flex items-center justify-center rounded-lg border border-line bg-white px-5 py-2.5 text-sm font-semibold text-ink transition-colors hover:bg-surface-2;
+  }
+  .eyebrow {
+    @apply inline-block rounded-full bg-brand-soft px-3 py-1 text-xs font-semibold uppercase tracking-wide text-brand;
+  }
+  .card {
+    @apply rounded-2xl border border-line bg-white p-6;
+  }
+}

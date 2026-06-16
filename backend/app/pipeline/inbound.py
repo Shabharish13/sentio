@@ -41,6 +41,19 @@ def run_inbound_pipeline(form: dict, *, apollo, llm, tavily, hubspot) -> Pipelin
 
     name = deal_name(form)
     props = contact_props(form)
+    org_fields = org.get("organization") or {}
+    person_fields = person.get("person") or {}
+    full_name = f"{form.get('first_name', '')} {form.get('last_name', '')}".strip()
+    display = dict(
+        contact_name=full_name,
+        contact_title=form.get("job_title") or person_fields.get("title") or "",
+        contact_email=email,
+        company_name=form.get("company_name") or "",
+        headcount=lead.headcount,
+        industry=org_fields.get("industry"),
+        revenue=org_fields.get("annual_revenue") or org_fields.get("organization_revenue"),
+        enriched=bool(org_fields),
+    )
 
     if score.route == "disqualified":
         crm = sync_to_crm(email=email, contact_props=props, deal_name=name,
@@ -49,7 +62,7 @@ def run_inbound_pipeline(form: dict, *, apollo, llm, tavily, hubspot) -> Pipelin
             route="disqualified", fit_grade=score.fit.grade, fit_score=score.fit.score,
             stakeholder=score.fit.stakeholder, intent_score=score.intent.score,
             signal_type="none", top_signal=None, email_draft=None,
-            disqualification_reason=score.disqualification_reason, crm=crm,
+            disqualification_reason=score.disqualification_reason, crm=crm, **display,
         )
 
     record = build_record(form, org, person)
@@ -68,4 +81,5 @@ def run_inbound_pipeline(form: dict, *, apollo, llm, tavily, hubspot) -> Pipelin
         stakeholder=score.fit.stakeholder, intent_score=score.intent.score,
         signal_type=research.signal_type, top_signal=research.top_signal,
         email_draft=email_body, disqualification_reason=None, crm=crm,
+        source_url=research.source_url, **display,
     )

@@ -40,6 +40,21 @@ def test_tavily_budget_exhausted_degrades_gracefully():
     assert brief.signal_type == "none"
 
 
+def test_tavily_http_error_degrades_gracefully():
+    import httpx
+
+    class FlakyTavily:
+        def search(self, query, **kwargs):
+            raise httpx.ConnectError("network down")
+
+    llm = StubLLM([
+        json.dumps({"action": "search", "query": "q"}),
+        json.dumps({"action": "final", "top_signal": None, "signal_type": "none"}),
+    ])
+    brief = run_research({}, llm=llm, tavily=FlakyTavily())
+    assert brief.signal_type == "none"
+
+
 def test_returns_final_brief_without_search():
     llm = StubLLM([json.dumps({
         "action": "final",
