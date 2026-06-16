@@ -24,6 +24,22 @@ class StubTavily:
         return {"results": [{"url": "https://example.com/x", "title": "x"}]}
 
 
+def test_tavily_budget_exhausted_degrades_gracefully():
+    from app.clients.tavily_client import TavilyBudgetError
+
+    class BudgetExhaustedTavily:
+        def search(self, query, **kwargs):
+            raise TavilyBudgetError("exhausted")
+
+    llm = StubLLM([
+        json.dumps({"action": "search", "query": "q"}),
+        json.dumps({"action": "final", "top_signal": None, "signal_type": "none"}),
+    ])
+    # Budget error must be swallowed (empty results) and the loop reach a final brief.
+    brief = run_research({}, llm=llm, tavily=BudgetExhaustedTavily())
+    assert brief.signal_type == "none"
+
+
 def test_returns_final_brief_without_search():
     llm = StubLLM([json.dumps({
         "action": "final",
