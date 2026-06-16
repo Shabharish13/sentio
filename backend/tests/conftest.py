@@ -4,6 +4,7 @@ import pytest
 @pytest.fixture(autouse=True)
 def _dummy_env(monkeypatch):
     """Unit tests must never read real keys or hit the network."""
+    monkeypatch.setenv("OPENAI_API_KEY", "test-openai")
     monkeypatch.setenv("ANTHROPIC_API_KEY", "test-anthropic")
     monkeypatch.setenv("APOLLO_API_KEY", "test-apollo")
     monkeypatch.setenv("TAVILY_API_KEY", "test-tavily")
