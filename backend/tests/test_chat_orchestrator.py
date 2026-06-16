@@ -4,6 +4,12 @@ from app.chat.models import QualificationState
 from app.chat.orchestrator import handle_turn
 from app.rag.store import Chunk
 
+# Structured Sage reply (answer + qualifying question) used by the stub LLM.
+SAGE_JSON = json.dumps({
+    "answer": "Sentio gives a 60-90 day churn warning.",
+    "question": "Are you on a CS team or RevOps?",
+})
+
 
 class StubRetriever:
     def __init__(self, score):
@@ -25,7 +31,7 @@ class StubLLM:
         if "qualification router" in system:
             return self._outcome
         if "[CONTEXT]" in system:
-            return "Sentio gives a 60–90 day churn warning. Are you on a CS team or RevOps?"
+            return SAGE_JSON
         if "[ENRICHED RECORD]" in user:
             return json.dumps({"action": "final", "top_signal": "Raised a Series B",
                                "signal_type": "funding", "source_url": "https://x"})
@@ -67,19 +73,18 @@ def _state(page="/pricing"):
     return QualificationState(session_id="s1", page=page)
 
 
-def test_low_confidence_escalates_without_classifying_or_crm():
+def test_low_confidence_redirects_without_terminal_action():
     hubspot = StubHubSpot()
-    llm = StubLLM(json.dumps({"outcome": "continue"}))
+    llm = StubLLM(json.dumps({"outcome": "escalate"}))  # classifier outcome ignored on redirect
     turn = handle_turn(_state(), "tell me a poem", llm=llm, retriever=StubRetriever(0.10),
                        apollo=StubApollo(), tavily=StubTavily(), hubspot=hubspot)
-    assert turn.escalated is True
-    assert turn.outcome == "escalate"
-    assert hubspot.calls == []
-    # classifier (qualification router) never invoked
-    assert not any("qualification router" in s for s in llm.calls)
+    assert turn.escalated is False
+    assert turn.outcome == "continue"
+    assert turn.question is None
+    assert hubspot.calls == []  # no terminal CRM action on an off-topic redirect
 
 
-def test_continue_turn_answers_and_writes_no_crm():
+def test_continue_turn_answers_with_question_and_writes_no_crm():
     hubspot = StubHubSpot()
     llm = StubLLM(json.dumps({"outcome": "continue", "signals": {"team_context": "CS team"}}))
     state = _state()
@@ -88,9 +93,29 @@ def test_continue_turn_answers_and_writes_no_crm():
     assert turn.escalated is False
     assert turn.outcome == "continue"
     assert turn.booked is False
+    assert turn.question == "Are you on a CS team or RevOps?"
+    assert "60-90 day" in turn.reply
     assert hubspot.calls == []
     assert state.signals["team_context"] == "CS team"
-    assert len(state.history) == 2
+    assert len(state.history) == 2  # user + assistant answer
+
+
+def test_classifier_sees_visitor_message_but_not_fresh_answer():
+    """The two LLM calls run concurrently; the classifier reads the transcript up to
+    the visitor's latest message, never Sage's freshly generated answer."""
+    captured = {}
+
+    class CaptureLLM(StubLLM):
+        def complete(self, system, user, max_tokens=1024):
+            if "qualification router" in system:
+                captured["transcript"] = user
+            return super().complete(system, user, max_tokens)
+
+    llm = CaptureLLM(json.dumps({"outcome": "continue"}))
+    handle_turn(_state(), "what does sentio do?", llm=llm, retriever=StubRetriever(0.55),
+                apollo=StubApollo(), tavily=StubTavily(), hubspot=StubHubSpot())
+    assert "what does sentio do?" in captured["transcript"]
+    assert "60-90 day churn warning" not in captured["transcript"]
 
 
 def test_book_with_email_runs_pipeline_and_attaches_transcript():
@@ -136,6 +161,47 @@ def test_disqualify_without_email_closes_warmly_no_crm():
     assert turn.outcome == "disqualify"
     assert turn.booked is False
     assert hubspot.calls == []
+
+
+def test_escalate_without_email_asks_for_email_no_crm():
+    hubspot = StubHubSpot()
+    payload = json.dumps({"outcome": "escalate"})
+    llm = StubLLM(payload)
+    turn = handle_turn(_state(), "we need a custom enterprise contract and SSO",
+                       llm=llm, retriever=StubRetriever(0.55), apollo=StubApollo(),
+                       tavily=StubTavily(), hubspot=hubspot)
+    assert turn.outcome == "escalate"
+    assert turn.escalated is True
+    assert "work email" in turn.reply  # email-capture ask appended
+    assert "connect" not in turn.reply.lower()  # no fake live-handoff wording
+    assert hubspot.calls == []  # no CRM record without an email
+
+
+def test_escalate_with_email_writes_followup_record():
+    hubspot = StubHubSpot()
+    payload = json.dumps({"outcome": "escalate", "email": "ciso@bigco.com"})
+    llm = StubLLM(payload)
+    state = _state()
+    turn = handle_turn(state, "I need to talk to someone about our DPA, here's my email ciso@bigco.com",
+                       llm=llm, retriever=StubRetriever(0.55), apollo=StubApollo(),
+                       tavily=StubTavily(), hubspot=hubspot)
+    assert turn.outcome == "escalate"
+    assert turn.escalated is True
+    assert state.email == "ciso@bigco.com"
+    assert ("contact", "ciso@bigco.com") in hubspot.calls
+    note = [c for c in hubspot.calls if c[0] == "note"][0]
+    assert "Escalated via chat" in note[1]
+
+
+def test_escalate_crm_failure_is_swallowed_and_reply_returned():
+    hubspot = StubHubSpot(fail=True)
+    payload = json.dumps({"outcome": "escalate", "email": "ciso@bigco.com"})
+    llm = StubLLM(payload)
+    turn = handle_turn(_state(), "need legal review, ciso@bigco.com", llm=llm,
+                       retriever=StubRetriever(0.55), apollo=StubApollo(),
+                       tavily=StubTavily(), hubspot=hubspot)
+    assert turn.escalated is True
+    assert turn.reply  # conversation survives the CRM failure
 
 
 def test_crm_failure_is_swallowed_and_reply_still_returned():

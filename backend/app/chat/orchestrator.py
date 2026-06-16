@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from concurrent.futures import ThreadPoolExecutor
 
 from app.agents.crm import sync_to_crm
 from app.agents.models import CrmResult
@@ -11,6 +12,12 @@ from app.pipeline.adapter import email_domain
 from app.pipeline.inbound import run_inbound_pipeline
 
 logger = logging.getLogger(__name__)
+
+# Asked for when the classifier escalates and we still need the visitor's email.
+ESCALATION_EMAIL_PROMPT = (
+    " To get this in front of the right person, what's the best work email for a "
+    "sales rep to follow up on?"
+)
 
 
 def _company_name(state: QualificationState) -> str:
@@ -80,26 +87,65 @@ def _disqualify(state: QualificationState, reason: str | None, *, hubspot) -> Cr
     )
 
 
+def _escalate(state: QualificationState, *, hubspot) -> CrmResult:
+    """Escalate outcome with a captured email: upsert a contact and attach an
+    escalation note so a sales rep has full context. Mirrors _disqualify; the
+    deal lands in the demo-requested pipeline since this is a hot, hand-raised lead."""
+    note = (
+        "Escalated via chat - visitor raised an enterprise/security/human-handoff "
+        f"request that needs a sales rep.\n\n{_chat_note(state)}"
+    )
+    props = {"firstname": "", "lastname": "", "jobtitle": state.signals.get("authority", "")}
+    return sync_to_crm(
+        email=state.email,
+        contact_props=props,
+        deal_name=f"{_company_name(state)} - chat escalation",
+        route="qualified",
+        note_body=note,
+        hubspot=hubspot,
+    )
+
+
 def handle_turn(state: QualificationState, message: str, *,
                 llm, retriever, apollo, tavily, hubspot) -> ChatTurn:
-    """One chat turn: ground via Sage, classify the outcome, and fire any terminal
-    CRM action. CRM/enrichment failures degrade gracefully — the reply is always
-    returned so the conversation never dies on an integration error."""
+    """One chat turn: ground via Sage and classify the outcome CONCURRENTLY, then
+    fire any terminal CRM action. The classifier reads only the visitor transcript,
+    so it does not depend on Sage's freshly generated answer - running both blocking
+    LLM calls in parallel roughly halves turn latency. CRM/enrichment failures
+    degrade gracefully: the reply is always returned so the conversation never dies
+    on an integration error."""
     state.add("user", message)
 
-    sage = sage_answer(message, page=state.page, llm=llm, retriever=retriever)
-    state.add("assistant", sage.reply)
+    # Snapshot the transcript the classifier sees (visitor messages so far) before
+    # appending Sage's reply, so the two LLM calls are truly independent.
+    classifier_history = list(state.history)
 
-    if sage.escalated:
-        state.outcome = "escalate"
-        return ChatTurn(session_id=state.session_id, reply=sage.reply, outcome="escalate",
-                        escalated=True, booked=False, sources=[])
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        sage_future = pool.submit(sage_answer, message, page=state.page, llm=llm, retriever=retriever)
+        decision_future = pool.submit(classify, classifier_history, state.signals, llm)
+        sage = sage_future.result()
+        decision = decision_future.result()
 
-    decision = classify(state.history, state.signals, llm)
+    state.add("assistant", sage.answer)
+
+    # Off-topic / low retrieval confidence: stay in the conversation, do not run any
+    # terminal CRM action, ignore the classifier's outcome for this turn.
+    if sage.redirected:
+        state.outcome = "continue"
+        return ChatTurn(session_id=state.session_id, reply=sage.answer,
+                        question=sage.question, outcome="continue", escalated=False,
+                        booked=False, sources=[])
+
     state.signals.update(decision.signals)
     if decision.email and not state.email:
         state.email = decision.email
     state.outcome = decision.outcome
+
+    reply = sage.answer
+    escalated = decision.outcome == "escalate"
+    if escalated and not state.email:
+        # No email yet: ask for one so a rep can follow up (no fake live handoff).
+        reply = sage.answer.rstrip() + ESCALATION_EMAIL_PROMPT
 
     booked = False
     try:
@@ -108,11 +154,14 @@ def handle_turn(state: QualificationState, message: str, *,
             booked = state.crm.stage == get_demo_stage()
         elif decision.outcome == "disqualify" and state.email:
             state.crm = _disqualify(state, decision.reason, hubspot=hubspot)
+        elif decision.outcome == "escalate" and state.email:
+            state.crm = _escalate(state, hubspot=hubspot)
     except Exception:  # noqa: BLE001 — never let a CRM error break the chat reply
         logger.exception("chat CRM action failed for session %s", state.session_id)
 
-    return ChatTurn(session_id=state.session_id, reply=sage.reply, outcome=state.outcome,
-                    escalated=False, booked=booked, sources=sage.sources)
+    return ChatTurn(session_id=state.session_id, reply=reply, question=sage.question,
+                    outcome=state.outcome, escalated=escalated, booked=booked,
+                    sources=sage.sources)
 
 
 def get_demo_stage() -> str:

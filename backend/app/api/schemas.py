@@ -51,7 +51,12 @@ class ChatRequest(BaseModel):
 
 class ChatResponse(BaseModel):
     session_id: str
+    # `answer` is the answer bubble; `question` (nullable) is the qualifying
+    # question rendered as a separate bubble. `reply` is kept as an alias of
+    # `answer` for backwards compatibility with existing callers.
+    answer: str
     reply: str
+    question: str | None = None
     outcome: str
     escalated: bool
     booked: bool

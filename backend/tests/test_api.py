@@ -16,7 +16,8 @@ class StubLLM:
         if "qualification router" in system:
             return json.dumps({"outcome": self._outcome})
         if "[CONTEXT]" in system:
-            return "Sentio scores account health. Are you on a CS team or RevOps?"
+            return json.dumps({"answer": "Sentio scores account health.",
+                               "question": "Are you on a CS team or RevOps?"})
         if "[ENRICHED RECORD]" in user:
             return json.dumps({"action": "final", "top_signal": "Raised a Series B",
                                "signal_type": "funding", "source_url": "https://x"})
@@ -99,7 +100,9 @@ def test_chat_answer_turn(client):
     assert resp.status_code == 200
     body = resp.json()
     assert body["escalated"] is False
-    assert body["reply"]
+    assert body["answer"] == "Sentio scores account health."
+    assert body["reply"] == body["answer"]  # backwards-compat alias
+    assert body["question"] == "Are you on a CS team or RevOps?"
     assert body["session_id"]
 
 
@@ -110,7 +113,7 @@ def test_chat_session_continuity(client):
     assert second["session_id"] == sid
 
 
-def test_chat_low_confidence_escalates():
+def test_chat_low_confidence_redirects():
     app.dependency_overrides[deps.provide_llm] = lambda: StubLLM()
     app.dependency_overrides[deps.provide_apollo] = lambda: StubApollo()
     app.dependency_overrides[deps.provide_tavily] = lambda: StubTavily()
@@ -119,8 +122,11 @@ def test_chat_low_confidence_escalates():
     try:
         c = TestClient(app)
         body = c.post("/chat", json={"message": "write me a poem", "page": "/"}).json()
-        assert body["escalated"] is True
-        assert body["outcome"] == "escalate"
+        # Off-topic / low confidence is a redirect, not an escalation.
+        assert body["escalated"] is False
+        assert body["outcome"] == "continue"
+        assert body["question"] is None
+        assert "Sentio" in body["answer"]
     finally:
         app.dependency_overrides.clear()
 

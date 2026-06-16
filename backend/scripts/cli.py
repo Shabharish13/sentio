@@ -87,8 +87,10 @@ def cmd_sage(args: argparse.Namespace) -> None:
               "  .venv/Scripts/python.exe -m scripts.build_kb_index", file=sys.stderr)
         raise SystemExit(2)
     resp = answer(args.question, page=args.page, llm=_llm(), retriever=retriever)
-    print(f"[escalated={resp.escalated}]  sources={resp.sources}")
-    print(resp.reply)
+    print(f"[redirected={resp.redirected}]  sources={resp.sources}")
+    print(resp.answer)
+    if resp.question:
+        print(resp.question)
 
 
 # ---------------------------------------------------------------- pipeline

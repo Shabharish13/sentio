@@ -27,11 +27,15 @@ Outcomes (pick exactly one):
 - "disqualify": clearly outside the market — tiny/pre-revenue (<20, solo founder),
   non-commercial (student, personal project), or no CS function and no path to a
   buyer. Set "reason" to the specific disqualifier.
-- "escalate": the visitor asks for a human, custom/enterprise pricing, security/
-  legal/procurement, or implementation scope.
+- "escalate": a GENUINE sales-handoff trigger only - the visitor explicitly asks
+  to talk to a human/sales, OR raises custom/enterprise/volume pricing, OR raises
+  security review / legal / procurement / DPA / data migration / custom
+  integrations. Off-topic chatter, jokes, or unrelated questions are NOT an
+  escalation - those are just "continue" (the assistant redirects them).
 - "nurture": genuine interest but timeline is exploratory or company is below the
   Book threshold.
-- "continue": none of the above yet — keep qualifying.
+- "continue": none of the above yet (including off-topic messages) - keep
+  qualifying or redirect.
 
 Respond with exactly one JSON object and nothing else:
 {"signals": {"use_case": "...", "timeline": "..."}, "outcome": "book",

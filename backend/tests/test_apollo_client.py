@@ -40,3 +40,38 @@ def test_enrich_organization_caches(tmp_path):
     client.enrich_organization("meridian.io")
     client.enrich_organization("meridian.io")
     assert route.call_count == 1
+
+
+@respx.mock
+def test_enrich_person_degrades_on_403(tmp_path):
+    # Person enrichment is not on Apollo's free tier; /people/match returns 403.
+    respx.post(PEOPLE_URL).mock(return_value=Response(403, json={"error": "forbidden"}))
+    client = ApolloClient(http=httpx.Client(), cache_dir=tmp_path)
+
+    result = client.enrich_person("jane@meridian.io", first_name="Jane")
+
+    assert result == {"person": {}}
+    # Empty fallback must NOT be cached, so a paid upgrade retries the live call.
+    assert not (tmp_path / "person_jane_at_meridian.io.json").exists()
+
+
+@respx.mock
+def test_enrich_person_degrades_on_network_error(tmp_path):
+    respx.post(PEOPLE_URL).mock(side_effect=httpx.ConnectError("boom"))
+    client = ApolloClient(http=httpx.Client(), cache_dir=tmp_path)
+
+    result = client.enrich_person("jane@meridian.io")
+
+    assert result == {"person": {}}
+    assert not (tmp_path / "person_jane_at_meridian.io.json").exists()
+
+
+@respx.mock
+def test_enrich_organization_degrades_on_failure(tmp_path):
+    respx.get(ORG_URL).mock(return_value=Response(500, json={"error": "boom"}))
+    client = ApolloClient(http=httpx.Client(), cache_dir=tmp_path)
+
+    result = client.enrich_organization("meridian.io")
+
+    assert result == {"organization": {}}
+    assert not (tmp_path / "org_meridian.io.json").exists()

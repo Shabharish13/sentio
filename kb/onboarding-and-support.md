@@ -6,6 +6,8 @@
 
 Sentio is designed to connect to your existing stack and surface meaningful signals within 24 hours of setup — not in 6 weeks after a professional services engagement.
 
+**Typical implementation timeline:** about 2 weeks to full team adoption.
+
 **Typical onboarding timeline:**
 - **Day 1:** Connect your first integration (CRM + product analytics). Sentio begins ingesting data and computing initial health scores.
 - **Day 2–3:** Review initial health scores with your CS Ops lead or VP CS. Confirm thresholds match your team's expectations. Adjust weighting if needed.

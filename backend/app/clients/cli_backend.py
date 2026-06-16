@@ -12,8 +12,13 @@ class LLMError(RuntimeError):
 
 
 def _default_runner(args: list[str]) -> str:
-    """Run the claude CLI and return stdout, raising LLMError on failure."""
-    proc = subprocess.run(args, capture_output=True, text=True)
+    """Run the claude CLI and return stdout, raising LLMError on failure.
+
+    `encoding="utf-8"` is mandatory: the CLI emits UTF-8 JSON, but text-mode
+    subprocess decoding otherwise defaults to the locale codec (cp1252 on Windows),
+    which turns UTF-8 punctuation into mojibake (the classic `a-circumflex` bug).
+    """
+    proc = subprocess.run(args, capture_output=True, text=True, encoding="utf-8")
     if proc.returncode != 0:
         detail = proc.stderr.strip() or proc.stdout.strip()
         raise LLMError(f"claude CLI exited {proc.returncode}: {detail}")
@@ -51,6 +56,11 @@ class ClaudeCliBackend:
             "json",
             "--max-turns",
             "1",
+            # These are pure text-generation calls. Disable all tools so the model
+            # answers directly instead of attempting a tool call (e.g. web search),
+            # which would consume the single allowed turn and fail as max_turns.
+            "--tools",
+            "",
         ]
         raw = self._runner(args)
         try:

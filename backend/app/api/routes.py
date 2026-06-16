@@ -78,7 +78,9 @@ def chat(
 
     return ChatResponse(
         session_id=turn.session_id,
+        answer=turn.reply,
         reply=turn.reply,
+        question=turn.question,
         outcome=turn.outcome,
         escalated=turn.escalated,
         booked=turn.booked,
