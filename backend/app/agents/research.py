@@ -13,16 +13,22 @@ VALID_SIGNALS = {
 
 
 def _extract_json(text: str) -> dict:
-    """Pull the first JSON object out of an LLM response (tolerates code fences/prose)."""
+    """Return the first valid JSON object found in an LLM response.
+
+    Scans for each '{' and tries to decode a JSON object starting there, so the
+    function tolerates code fences, leading prose, and trailing content.
+    """
+    decoder = json.JSONDecoder()
     text = text.strip()
-    start = text.find("{")
-    end = text.rfind("}")
-    if start == -1 or end == -1 or end < start:
-        return {}
-    try:
-        return json.loads(text[start : end + 1])
-    except json.JSONDecodeError:
-        return {}
+    for index, char in enumerate(text):
+        if char == "{":
+            try:
+                obj, _ = decoder.raw_decode(text[index:])
+            except json.JSONDecodeError:
+                continue
+            if isinstance(obj, dict):
+                return obj
+    return {}
 
 
 def _build_user(record: dict, searches: list[dict]) -> str:

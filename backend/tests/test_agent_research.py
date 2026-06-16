@@ -70,3 +70,12 @@ def test_search_cap_forces_final():
     brief = run_research({}, llm=llm, tavily=tavily, max_searches=3)
     assert len(tavily.queries) == 3
     assert brief.signal_type == "none"
+
+
+def test_json_extracted_from_prose_wrapped_response():
+    # LLM prose contains an earlier brace before the real JSON object.
+    noisy = 'Based on {the record}, here is my answer: {"action": "final", "top_signal": "Raised Series B", "signal_type": "funding", "source_url": "https://x"} hope that helps!'
+    llm = StubLLM([noisy])
+    brief = run_research({}, llm=llm, tavily=StubTavily())
+    assert brief.signal_type == "funding"
+    assert brief.top_signal == "Raised Series B"
