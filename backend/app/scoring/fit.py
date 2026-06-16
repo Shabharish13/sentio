@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import re
+
 from app.scoring.models import FitResult, Lead
 from app.scoring.weights import (
     load_business_model,
@@ -60,7 +62,7 @@ def score_title(title: str | None) -> tuple[int, str]:
         return 0, "other"
     text = title.strip().lower()
     for _priority, keywords, points, stakeholder in load_titles():
-        if any(kw in text for kw in keywords):
+        if any(re.search(rf"\b{re.escape(kw)}\b", text) for kw in keywords):
             return points, stakeholder
     return 0, "other"
 

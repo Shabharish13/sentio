@@ -102,3 +102,9 @@ def test_score_fit_grade_c():
     assert fit.score == 0
     assert fit.grade == "C"
     assert fit.stakeholder == "other"
+
+
+def test_title_no_false_positive_from_substring():
+    # "cro" must not match inside "microservices"; "cto" must not match inside "director"
+    assert score_title("Director of Microservices") == (0, "other")
+    assert score_title("Director of Customer Operations") == (0, "other")
