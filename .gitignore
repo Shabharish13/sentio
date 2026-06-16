@@ -16,3 +16,4 @@ node_modules/
 # Local caches
 cache/
 *.local.json
+backend/.chroma/
