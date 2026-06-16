@@ -17,3 +17,6 @@ node_modules/
 cache/
 *.local.json
 backend/.chroma/
+
+# Superseded research/frontend — do not ship
+archive/
