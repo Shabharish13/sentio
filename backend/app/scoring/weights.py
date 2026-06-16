@@ -45,3 +45,12 @@ def load_geography() -> dict[str, int]:
 def load_business_model() -> dict[str, int]:
     with (DATA_DIR / "business_model.csv").open(encoding="utf-8") as f:
         return {r["signal"].strip().lower(): int(r["points"]) for r in csv.DictReader(f)}
+
+
+@lru_cache
+def load_thresholds() -> list[tuple[str, int]]:
+    """Grade thresholds as (grade, min_score), sorted highest-min-score first."""
+    with (DATA_DIR / "thresholds.csv").open(encoding="utf-8") as f:
+        rows = [(r["grade"].strip(), int(r["min_score"])) for r in csv.DictReader(f)]
+    rows.sort(key=lambda x: x[1], reverse=True)
+    return rows

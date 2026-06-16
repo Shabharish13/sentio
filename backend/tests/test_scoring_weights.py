@@ -3,8 +3,13 @@ from app.scoring.weights import (
     load_geography,
     load_headcount_bands,
     load_industry,
+    load_thresholds,
     load_titles,
 )
+
+
+def test_thresholds_loaded_sorted_desc():
+    assert load_thresholds() == [("A", 60), ("B", 30), ("C", 0)]
 
 
 def test_headcount_bands_loaded():

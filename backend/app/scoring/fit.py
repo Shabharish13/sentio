@@ -8,6 +8,7 @@ from app.scoring.weights import (
     load_geography,
     load_headcount_bands,
     load_industry,
+    load_thresholds,
     load_titles,
 )
 
@@ -68,11 +69,10 @@ def score_title(title: str | None) -> tuple[int, str]:
 
 
 def grade_for(score: int) -> str:
-    if score >= 60:
-        return "A"
-    if score >= 30:
-        return "B"
-    return "C"
+    for grade, min_score in load_thresholds():
+        if score >= min_score:
+            return grade
+    return "C"  # safety fallback (unreachable while thresholds.csv defines C,0)
 
 
 def score_fit(lead: Lead) -> FitResult:
