@@ -37,12 +37,12 @@ Legend: `[x]` done · `[ ]` to do · `[~]` partial / build delta
 
 ## Phase 2 — Deterministic scoring engine
 
-- [ ] ICP scoring CSV built from `sentio-company-profile.md` (weights as data)
-- [ ] Fit-score calculator (headcount, industry, title, geography, business model) → A/B/C grade
-- [ ] Industry disambiguation (Financial Services → Apollo `technologies`, Tavily fallback)
-- [ ] Intent score from available signal (thin for form, richer for chat)
-- [ ] Routing / exit gate (C-grade → disqualified path; A/B → research/email path)
-- [ ] Tests: known-input fixtures → expected grade/score (deterministic, reproducible)
+- [x] ICP scoring CSV built from `sentio-company-profile.md` (weights as data)
+- [x] Fit-score calculator (headcount, industry, title, geography, business model) → A/B/C grade
+- [x] Industry disambiguation (Financial Services → Apollo `technologies`, Tavily fallback) — *Tavily-fallback path deferred to Phase 3/4 enrichment; code uses the `technologies` field*
+- [x] Intent score from available signal (thin for form, richer for chat) — *form-path rubric done; chat-path intent is Phase 3 (Sage)*
+- [x] Routing / exit gate (C-grade → disqualified path; A/B → research/email path)
+- [x] Tests: known-input fixtures → expected grade/score (deterministic, reproducible)
 
 ## Phase 3 — The agents (backend)
 
