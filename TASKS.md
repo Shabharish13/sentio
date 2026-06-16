@@ -56,10 +56,10 @@ Legend: `[x]` done · `[ ]` to do · `[~]` partial / build delta
 
 ## Phase 4 — Inbound pipeline orchestration
 
-- [ ] Chain: exit check → cache/enrich → score → route → Research → Copywriter → CRM
-- [ ] C-grade short-circuit → CRM disqualified (skip Research/Copywriter)
-- [ ] End-to-end pipeline test with a sample lead (A, B, and C fixtures)
-- [ ] **Iteration log** — record what broke and how it was fixed (assignment values this)
+- [x] Chain: exit check → cache/enrich → score → route → Research → Copywriter → CRM (`app/pipeline/inbound.py`)
+- [x] C-grade short-circuit → CRM disqualified (skip Research/Copywriter)
+- [x] End-to-end pipeline test with sample leads (A qualified, C disqualified, exit-check fixtures; B routes through the same qualified branch)
+- [x] **Iteration log** — `ITERATION-LOG.md` (portal-id, JSON extraction, Sage threshold, OpenAI quota, Apollo cache)
 
 ## Phase 5 — API surface
 
