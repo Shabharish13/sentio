@@ -30,3 +30,13 @@ backend/.chroma/
 
 # Superseded research/frontend — do not ship
 archive/
+
+# Internal process docs — not part of the submission
+assignment/Demo-Script-CMO.md
+assignment/Hiring-Team-Handover.md
+assignment/ITERATION-LOG.md
+assignment/TASKS.md
+assignment/TEST-PLAN.md
+assignment/Test-results.md
+assignment/AI-Run-App.md
+docs/superpowers/
