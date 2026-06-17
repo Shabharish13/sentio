@@ -82,11 +82,12 @@ outcomes.
 
 | `fit_grade` | CTA |
 |---|---|
-| `A` | Request a 15-minute call. Direct, no hedging. |
-| `B` | Offer a relevant resource first, then invite a conversation. |
+| `A` | Request a 15-minute call. On the next line, include the booking link exactly as it appears in the `booking_link` field of the brief. |
+| `B` | Offer a relevant resource first, then invite a conversation. On the next line, include the `booking_link`. |
 
-End with the sender's first name only (no title or company — those live in the
-signature).
+Sign off with the value from `sender_name` in the brief (no title, no company —
+those live in the signature block). Never write a placeholder like [SDR first name]
+or [Name] — use the provided `sender_name` value directly.
 
 ## Stakeholder key phrases (optional — use at most one, never forced)
 

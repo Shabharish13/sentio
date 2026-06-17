@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import json
+import re
 
 from app.clients.anthropic_client import load_prompt
+from app.config import get_settings
 
 # Persona email frames (from sentio-company-profile.md). The Copywriter prompt
 # expects a pre-selected `email_frame` sentence keyed off the stakeholder type.
@@ -15,9 +17,14 @@ STAKEHOLDER_FRAMES = {
     "other": "Company stage and vertical — why churn risk is acute at this stage.",
 }
 
+# Matches unfilled merge-field placeholders like [SDR first name] or [Name],
+# but not [NEEDS VERIFICATION] which is an intentional data-quality marker.
+_PLACEHOLDER_RE = re.compile(r'\[(?!NEEDS VERIFICATION\b)[A-Za-z][A-Za-z ]{0,39}\]')
+
 
 def build_brief(contact, company, fit, intent, research, problem_stated: str = "") -> dict:
     """Assemble the structured brief the Copywriter prompt consumes."""
+    settings = get_settings()
     return {
         "contact": contact,
         "company": company,
@@ -31,6 +38,8 @@ def build_brief(contact, company, fit, intent, research, problem_stated: str = "
             "source_url": research.source_url,
         },
         "problem_stated": problem_stated,
+        "sender_name": settings.sdr_sender_name,
+        "booking_link": settings.sdr_booking_link,
     }
 
 
@@ -38,4 +47,6 @@ def write_email(brief: dict, llm) -> str:
     """Generate the SDR-review email body from the brief (sourced facts only)."""
     system = load_prompt("copywriter_agent.md")
     user = json.dumps(brief, indent=2, default=str)
-    return llm.complete(system, user, max_tokens=600).strip()
+    raw = llm.complete(system, user, max_tokens=600).strip()
+    # Strip any unfilled merge-field placeholders the LLM may have emitted.
+    return _PLACEHOLDER_RE.sub("", raw).strip()
