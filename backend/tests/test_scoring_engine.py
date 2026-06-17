@@ -36,15 +36,17 @@ def test_b_grade_within_icp_routes_qualified():
 
 
 def test_oversized_b_grade_routes_edge_fit():
-    """B-grade lead with headcount > 800 → edge_fit (not a clean qualified)."""
+    """B-grade lead with headcount > 800 → edge_fit (not a clean qualified).
+    Using Telecommunications industry to stay below the A-grade threshold."""
     lead = Lead(
         headcount=1100,
-        industry="Computer Software",
+        industry="Telecommunications",
         title="VP of Revenue Operations",
         country="United States",
         is_b2b=True,
     )
     result = score_lead(lead)
+    assert result.fit.grade == "B"
     assert result.route == "edge_fit"
     assert result.disqualification_reason is not None
     assert "1100" in result.disqualification_reason

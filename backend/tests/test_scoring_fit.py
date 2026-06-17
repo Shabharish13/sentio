@@ -108,3 +108,17 @@ def test_title_no_false_positive_from_substring():
     # "cro" must not match inside "microservices"; "cto" must not match inside "director"
     assert score_title("Director of Microservices") == (0, "other")
     assert score_title("Director of Customer Operations") == (0, "other")
+
+
+def test_revops_title_maps_to_economic_buyer():
+    assert score_title("VP of Revenue Operations") == (12, "economic_buyer")
+    assert score_title("Director of Revenue Operations") == (12, "economic_buyer")
+    assert score_title("VP Revenue Operations") == (12, "economic_buyer")
+    assert score_title("Head of Revenue Operations") == (12, "economic_buyer")
+    assert score_title("VP RevOps") == (12, "economic_buyer")
+
+
+def test_revops_title_does_not_false_positive():
+    # "operations" alone should not match the RevOps row
+    assert score_title("Director of Operations") == (0, "other")
+    assert score_title("VP of Business Operations") == (0, "other")
