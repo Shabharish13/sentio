@@ -35,6 +35,16 @@ If you're at 3 CSMs managing 30 accounts each, revisit this conversation when yo
 
 ---
 
+## "How soon can we go live?" / "What's your go-live timeline?"
+
+**Short answer:** Most customers go live with health scores within 24 hours of starting setup. Full team adoption - CSMs working from the daily task queue - typically takes 2 weeks.
+
+**Go-live steps:** Day 1 you connect your first integration (CRM + product analytics); Sentio surfaces initial health scores within a few hours. Days 2-7 cover threshold review and playbook configuration. Days 10-14 your CS team is onboarded and working from Sentio daily.
+
+Growth-tier customers get a dedicated onboarding specialist for the first 30 days. Enterprise customers get a dedicated implementation lead for 60 days with a custom go-live timeline. There is no lengthy professional services engagement - the integrations connect via OAuth or API key through the Sentio UI, no engineering required.
+
+---
+
 ## "How long does implementation take?"
 
 **Short answer:** Most Growth-tier customers are live with health scores within 24 hours of starting setup. Full team adoption (CSMs working from the task queue daily) typically happens within 2 weeks.
