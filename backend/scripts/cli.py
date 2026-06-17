@@ -224,6 +224,10 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv=None) -> None:
+    # Force UTF-8 output on Windows consoles (default codec is cp1252 which
+    # cannot encode em-dashes and non-breaking hyphens produced by the LLM).
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     args = build_parser().parse_args(argv)
     args.func(args)
 
