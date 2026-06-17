@@ -92,3 +92,11 @@ def test_classify_blank_next_question_falls_back_on_continue():
     d = classify([], {}, StubLLM(json.dumps({"outcome": "continue", "next_question": "  "})))
     assert d.next_question is not None
     assert d.next_question.endswith("?")
+
+
+def test_classify_falls_back_to_question_on_nurture():
+    # nurture is non-terminal too, so the fallback must fire when the LLM omits the
+    # question - guarding against nurture ever being lumped in with terminal outcomes.
+    d = classify([], {}, StubLLM(json.dumps({"outcome": "nurture"})))
+    assert d.next_question is not None
+    assert d.next_question.endswith("?")
