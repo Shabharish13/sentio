@@ -66,6 +66,26 @@ when absent.
 """
 
 
+# Ordered deterministic fallback questions, one per qualifying signal. Used when the
+# LLM omits next_question on a non-terminal turn so qualification never silently
+# stalls. Phrasing mirrors the suggestions in CLASSIFIER_PROMPT above.
+_FALLBACK_QUESTIONS: list[tuple[str, str]] = [
+    ("use_case", "Is the main thing you're solving surprise churn, or giving your CS team a consistent view of account health?"),
+    ("team_context", "Are you on a customer success team, or more of a RevOps / operations role?"),
+    ("authority", "Are you evaluating this for your own team, or is there a broader group - finance, IT - who'd be involved?"),
+    ("timeline", "Is this something you're actively solving this quarter, or still in early research?"),
+    ("company_scale", "Are you working with a CS team of roughly 10 or fewer, or larger than that?"),
+]
+
+
+def _fallback_question(known: dict[str, str]) -> str | None:
+    """First qualifying question whose signal has not been collected yet."""
+    for signal, question in _FALLBACK_QUESTIONS:
+        if not known.get(signal):
+            return question
+    return None
+
+
 @dataclass
 class OutcomeDecision:
     outcome: str = "continue"
@@ -84,7 +104,7 @@ def classify(history: list[dict[str, str]], signals: dict[str, str], llm) -> Out
         indent=2,
         default=str,
     )
-    raw = llm.complete(CLASSIFIER_PROMPT, user, max_tokens=300)
+    raw = llm.complete(CLASSIFIER_PROMPT, user, max_tokens=500)
     data = _extract_json(raw)
 
     outcome = data.get("outcome", "continue")
@@ -107,10 +127,13 @@ def classify(history: list[dict[str, str]], signals: dict[str, str], llm) -> Out
         next_question = None
     else:
         next_question = next_question.strip()
-    # Defense in depth: a terminal outcome never carries a qualifying question, so the
-    # close stays clean even if the model emits one against instructions.
+    # A terminal outcome never carries a qualifying question (clean close, even if the
+    # model emits one). On a non-terminal turn, guarantee a question deterministically
+    # when the model omitted it, so qualification always advances.
     if outcome in ("book", "escalate", "disqualify"):
         next_question = None
+    elif next_question is None:
+        next_question = _fallback_question({**signals, **merged})
 
     return OutcomeDecision(outcome=outcome, signals=merged, email=email, reason=reason,
                            next_question=next_question)

@@ -71,6 +71,24 @@ def test_classify_nulls_next_question_on_every_terminal_outcome():
         assert d.next_question is None, outcome
 
 
-def test_classify_blank_next_question_is_none():
+def test_classify_falls_back_to_question_when_llm_omits_it():
+    # Live gpt-5 frequently drops next_question; on a non-terminal turn we synthesize
+    # one deterministically so qualification never stalls.
+    d = classify([], {}, StubLLM(json.dumps({"outcome": "continue"})))
+    assert d.next_question is not None
+    assert d.next_question.endswith("?")
+
+
+def test_fallback_question_skips_already_collected_signals():
+    # use_case + team_context known -> the fallback targets the next gap (authority).
+    d = classify([], {"use_case": "churn", "team_context": "CS team"},
+                 StubLLM(json.dumps({"outcome": "continue"})))
+    assert "broader group" in d.next_question
+
+
+def test_classify_blank_next_question_falls_back_on_continue():
+    # A blank/whitespace question no longer passes through as None on a non-terminal
+    # turn; it is replaced by a deterministic fallback.
     d = classify([], {}, StubLLM(json.dumps({"outcome": "continue", "next_question": "  "})))
-    assert d.next_question is None
+    assert d.next_question is not None
+    assert d.next_question.endswith("?")
