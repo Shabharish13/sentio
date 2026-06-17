@@ -39,6 +39,11 @@ Outcomes (pick exactly one):
   those from its knowledge base, so they are "continue". Escalate needs intent to
   involve a human, not just mention of a sensitive topic. Off-topic chatter, jokes,
   or unrelated questions are also "continue" (the assistant redirects them).
+  ALSO NOT an escalation: wanting a demo, asking to "book a demo", "schedule a demo",
+  or "get started". A demo request is the Book path - return "continue" and keep
+  qualifying until company scale + champion role + active timeline are known, at which
+  point it becomes "book". Only route to a human via escalate for the (a)/(b)/(c)
+  triggers above.
 - "nurture": genuine interest but timeline is exploratory or company is below the
   Book threshold.
 - "continue": none of the above yet (including off-topic messages) - keep

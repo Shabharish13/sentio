@@ -100,3 +100,10 @@ def test_classify_falls_back_to_question_on_nurture():
     d = classify([], {}, StubLLM(json.dumps({"outcome": "nurture"})))
     assert d.next_question is not None
     assert d.next_question.endswith("?")
+
+
+def test_classifier_prompt_excludes_demo_requests_from_escalation():
+    from app.chat.outcome import CLASSIFIER_PROMPT
+    text = CLASSIFIER_PROMPT.lower()
+    assert "book a demo" in text
+    assert "not an escalation" in text
