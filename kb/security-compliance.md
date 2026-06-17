@@ -25,7 +25,7 @@ Sentio is GDPR compliant. Key details:
 ## Data Residency
 
 - **Default:** Data is stored and processed in the United States (AWS us-east-1).
-- **EU data residency:** Available on Enterprise tier for customers requiring data to remain in the EU (AWS eu-west-1, Frankfurt). This must be selected at contract signing — migration between regions post-deployment is possible but involves a planned maintenance window.
+- **EU data residency:** Available on Enterprise tier for customers requiring data to remain in the EU (AWS eu-central-1, Frankfurt). This must be selected at contract signing — migration between regions post-deployment is possible but involves a planned maintenance window.
 - **Data in transit:** All data in transit is encrypted using TLS 1.2 or higher.
 - **Data at rest:** All customer data encrypted at rest using AES-256.
 

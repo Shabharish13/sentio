@@ -17,7 +17,8 @@ _RECOVERABLE = (LLMError, openai.OpenAIError, anthropic.AnthropicError)
 class LLMBackend(Protocol):
     """Anything that can turn a system+user prompt into a string."""
 
-    def complete(self, system: str, user: str, max_tokens: int = ...) -> str: ...
+    def complete(self, system: str, user: str, max_tokens: int = ...,
+                 reasoning_effort: str | None = ...) -> str: ...
 
 
 class LLM:
@@ -28,11 +29,15 @@ class LLM:
             raise ValueError("LLM requires at least one backend")
         self._backends = backends
 
-    def complete(self, system: str, user: str, max_tokens: int = 1024) -> str:
+    def complete(self, system: str, user: str, max_tokens: int = 1024,
+                 reasoning_effort: str | None = None) -> str:
+        # Only forward reasoning_effort when set, so the common path keeps the
+        # original 3-arg call shape (backends that predate the param still work).
+        extra = {"reasoning_effort": reasoning_effort} if reasoning_effort else {}
         last_error: Exception | None = None
         for backend in self._backends:
             try:
-                return backend.complete(system, user, max_tokens)
+                return backend.complete(system, user, max_tokens, **extra)
             except _RECOVERABLE as exc:
                 last_error = exc
                 continue

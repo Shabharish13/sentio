@@ -14,9 +14,10 @@ def sync_to_crm(*, email: str, contact_props: dict, deal_name: str, route: str,
     if not note_body or not note_body.strip():
         raise ValueError("note_body is mandatory — a deal must never be written without a note")
     settings = get_settings()
+    # edge_fit leads go to demo-requested so the SDR can review, not auto-rejected.
     stage = (
         settings.hubspot_stage_demo_requested
-        if route == "qualified"
+        if route in {"qualified", "edge_fit"}
         else settings.hubspot_stage_disqualified
     )
     contact_id = hubspot.upsert_contact(email, contact_props)

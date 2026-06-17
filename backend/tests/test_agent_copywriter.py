@@ -1,4 +1,5 @@
 import json
+import re
 
 from app.agents.copywriter import STAKEHOLDER_FRAMES, build_brief, write_email
 from app.agents.models import ResearchBrief
@@ -52,3 +53,36 @@ def test_write_email_calls_llm_with_copywriter_prompt_and_returns_body():
     system, user = llm.calls[0]
     assert "outreach" in system.lower() or "copywriter" in system.lower()
     assert json.loads(user)["fit_grade"] == "A"
+
+
+def test_build_brief_includes_sender_name_and_booking_link():
+    brief = build_brief(
+        contact={"first_name": "Jane", "name": "Jane Doe", "title": "VP CS"},
+        company={"name": "Meridian", "headcount": 200, "industry": "Computer Software"},
+        fit=_fit("champion"),
+        intent=IntentResult(score=20, band="high", known=True),
+        research=ResearchBrief(None, "none", None),
+    )
+    assert "sender_name" in brief
+    assert brief["sender_name"]  # non-empty
+    assert "booking_link" in brief
+    assert brief["booking_link"].startswith("http")
+
+
+def test_write_email_strips_unfilled_placeholders():
+    llm = StubLLM("Hi Jane,\n\nGood stuff.\n\nBest,\n[SDR first name]")
+    brief = {"contact": {"first_name": "Jane"}, "fit_grade": "A",
+             "sender_name": "Alex", "booking_link": "https://calendly.com/sentio/15min"}
+    out = write_email(brief, llm=llm)
+    assert not re.search(r'\[[A-Za-z ]+\]', out), f"placeholder not stripped: {out!r}"
+
+
+def test_write_email_preserves_needs_verification_tag():
+    """[NEEDS VERIFICATION] is intentional — must NOT be stripped."""
+    llm = StubLLM(
+        "Hi Jane,\n\nWe help companies like yours [NEEDS VERIFICATION].\n\nBest,\nAlex"
+    )
+    brief = {"contact": {"first_name": "Jane"}, "fit_grade": "A",
+             "sender_name": "Alex", "booking_link": "https://calendly.com/sentio/15min"}
+    out = write_email(brief, llm=llm)
+    assert "[NEEDS VERIFICATION]" in out

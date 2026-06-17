@@ -50,3 +50,60 @@ def test_classify_rejects_non_email_strings():
     payload = json.dumps({"outcome": "continue", "email": "not-an-email"})
     d = classify([], {}, StubLLM(payload))
     assert d.email is None
+
+
+def test_classify_returns_next_question_on_continue():
+    # The router owns the next qualifying question now (decoupled from Sage's answer).
+    payload = json.dumps({"outcome": "continue",
+                          "next_question": "Are you on a CS team or RevOps?"})
+    d = classify([], {}, StubLLM(payload))
+    assert d.next_question == "Are you on a CS team or RevOps?"
+
+
+def test_classify_nulls_next_question_on_every_terminal_outcome():
+    # A terminal outcome never carries a qualifying question - even if the model emits
+    # one against instructions, the close stays clean. This is the fix for the
+    # double-ask bug (email request + a contradictory plan question on the same turn).
+    for outcome in ("book", "escalate", "disqualify"):
+        payload = json.dumps({"outcome": outcome, "email": "x@acme.com",
+                              "next_question": "Growth with a pilot, or Starter annual?"})
+        d = classify([], {}, StubLLM(payload))
+        assert d.next_question is None, outcome
+
+
+def test_classify_falls_back_to_question_when_llm_omits_it():
+    # Live gpt-5 frequently drops next_question; on a non-terminal turn we synthesize
+    # one deterministically so qualification never stalls.
+    d = classify([], {}, StubLLM(json.dumps({"outcome": "continue"})))
+    assert d.next_question is not None
+    assert d.next_question.endswith("?")
+
+
+def test_fallback_question_skips_already_collected_signals():
+    # use_case + team_context known -> the fallback targets the next gap (authority).
+    d = classify([], {"use_case": "churn", "team_context": "CS team"},
+                 StubLLM(json.dumps({"outcome": "continue"})))
+    assert "broader group" in d.next_question
+
+
+def test_classify_blank_next_question_falls_back_on_continue():
+    # A blank/whitespace question no longer passes through as None on a non-terminal
+    # turn; it is replaced by a deterministic fallback.
+    d = classify([], {}, StubLLM(json.dumps({"outcome": "continue", "next_question": "  "})))
+    assert d.next_question is not None
+    assert d.next_question.endswith("?")
+
+
+def test_classify_falls_back_to_question_on_nurture():
+    # nurture is non-terminal too, so the fallback must fire when the LLM omits the
+    # question - guarding against nurture ever being lumped in with terminal outcomes.
+    d = classify([], {}, StubLLM(json.dumps({"outcome": "nurture"})))
+    assert d.next_question is not None
+    assert d.next_question.endswith("?")
+
+
+def test_classifier_prompt_excludes_demo_requests_from_escalation():
+    from app.chat.outcome import CLASSIFIER_PROMPT
+    text = CLASSIFIER_PROMPT.lower()
+    assert "book a demo" in text
+    assert "not an escalation" in text

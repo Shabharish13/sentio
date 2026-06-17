@@ -87,8 +87,8 @@ def cmd_sage(args: argparse.Namespace) -> None:
               "  .venv/Scripts/python.exe -m scripts.build_kb_index", file=sys.stderr)
         raise SystemExit(2)
     resp = answer(args.question, page=args.page, llm=_llm(), retriever=retriever)
-    print(f"[escalated={resp.escalated}]  sources={resp.sources}")
-    print(resp.reply)
+    print(f"[redirected={resp.redirected}]  sources={resp.sources}")
+    print(resp.answer)
 
 
 # ---------------------------------------------------------------- pipeline
@@ -143,8 +143,13 @@ def cmd_pipeline(args: argparse.Namespace) -> None:
     else:
         hubspot = _DryRunHubSpot()
 
-    result = run_inbound_pipeline(form, apollo=apollo, llm=_llm(),
-                                  tavily=TavilyClient(max_calls=3), hubspot=hubspot)
+    try:
+        result = run_inbound_pipeline(form, apollo=apollo, llm=_llm(),
+                                      tavily=TavilyClient(max_calls=3), hubspot=hubspot)
+    except ValueError as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        raise SystemExit(1) from None
+
     print(json.dumps({
         "route": result.route, "fit_grade": result.fit_grade, "fit_score": result.fit_score,
         "stakeholder": result.stakeholder, "intent_score": result.intent_score,
@@ -224,6 +229,10 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv=None) -> None:
+    # Force UTF-8 output on Windows consoles (default codec is cp1252 which
+    # cannot encode em-dashes and non-breaking hyphens produced by the LLM).
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     args = build_parser().parse_args(argv)
     args.func(args)
 

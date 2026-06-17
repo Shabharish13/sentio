@@ -12,8 +12,13 @@ class LLMError(RuntimeError):
 
 
 def _default_runner(args: list[str]) -> str:
-    """Run the claude CLI and return stdout, raising LLMError on failure."""
-    proc = subprocess.run(args, capture_output=True, text=True)
+    """Run the claude CLI and return stdout, raising LLMError on failure.
+
+    `encoding="utf-8"` is mandatory: the CLI emits UTF-8 JSON, but text-mode
+    subprocess decoding otherwise defaults to the locale codec (cp1252 on Windows),
+    which turns UTF-8 punctuation into mojibake (the classic `a-circumflex` bug).
+    """
+    proc = subprocess.run(args, capture_output=True, text=True, encoding="utf-8")
     if proc.returncode != 0:
         detail = proc.stderr.strip() or proc.stdout.strip()
         raise LLMError(f"claude CLI exited {proc.returncode}: {detail}")
@@ -36,9 +41,10 @@ class ClaudeCliBackend:
         self._runner = runner or _default_runner
         self._model = model or get_settings().claude_model
 
-    def complete(self, system: str, user: str, max_tokens: int = 1024) -> str:
-        # max_tokens is accepted for interface parity with the SDK backend; the
-        # headless CLI surface has no per-call output cap, so it is not enforced.
+    def complete(self, system: str, user: str, max_tokens: int = 1024,
+                 reasoning_effort: str | None = None) -> str:
+        # max_tokens / reasoning_effort are accepted for interface parity with the
+        # SDK backend; the headless CLI surface exposes neither, so they are ignored.
         args = [
             "claude",
             "-p",
@@ -51,6 +57,11 @@ class ClaudeCliBackend:
             "json",
             "--max-turns",
             "1",
+            # These are pure text-generation calls. Disable all tools so the model
+            # answers directly instead of attempting a tool call (e.g. web search),
+            # which would consume the single allowed turn and fail as max_turns.
+            "--tools",
+            "",
         ]
         raw = self._runner(args)
         try:

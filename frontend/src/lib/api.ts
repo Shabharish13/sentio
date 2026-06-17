@@ -39,7 +39,12 @@ export interface LeadBrief {
 
 export interface ChatResponse {
   session_id: string;
+  // `answer` is the main reply bubble; `question` (nullable) is the qualifying
+  // question rendered as a separate bubble. `reply` is a backwards-compat alias
+  // of `answer`.
+  answer: string;
   reply: string;
+  question: string | null;
   outcome: string;
   escalated: boolean;
   booked: boolean;

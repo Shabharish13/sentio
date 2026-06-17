@@ -14,6 +14,22 @@ from app.pipeline.models import PipelineResult
 from app.scoring.engine import score_lead
 
 
+def _format_revenue(value) -> str | None:
+    """Apollo returns annual_revenue as a number; the brief shows a readable
+    string. Format to $X.XB / $X.XM; pass through any non-numeric value as-is."""
+    if value is None or value == "":
+        return None
+    try:
+        amount = float(value)
+    except (TypeError, ValueError):
+        return str(value)
+    if amount >= 1_000_000_000:
+        return f"${amount / 1_000_000_000:.1f}B"
+    if amount >= 1_000_000:
+        return f"${amount / 1_000_000:.1f}M"
+    return f"${amount:,.0f}"
+
+
 def _handoff_note(score, research, email_body: str) -> str:
     return (
         f"SDR hand-off — persona: {score.fit.stakeholder}; "
@@ -51,7 +67,7 @@ def run_inbound_pipeline(form: dict, *, apollo, llm, tavily, hubspot) -> Pipelin
         company_name=form.get("company_name") or "",
         headcount=lead.headcount,
         industry=org_fields.get("industry"),
-        revenue=org_fields.get("annual_revenue") or org_fields.get("organization_revenue"),
+        revenue=_format_revenue(org_fields.get("annual_revenue") or org_fields.get("organization_revenue")),
         enriched=bool(org_fields),
     )
 
@@ -74,12 +90,16 @@ def run_inbound_pipeline(form: dict, *, apollo, llm, tavily, hubspot) -> Pipelin
     )
     email_body = write_email(brief, llm=llm)
     note = _handoff_note(score, research, email_body)
+
+    if score.route == "edge_fit":
+        note = f"[EDGE FIT — review before outreach]\n{score.disqualification_reason}\n\n{note}"
+
     crm = sync_to_crm(email=email, contact_props=props, deal_name=name,
-                      route="qualified", note_body=note, hubspot=hubspot)
+                      route=score.route, note_body=note, hubspot=hubspot)
     return PipelineResult(
-        route="qualified", fit_grade=score.fit.grade, fit_score=score.fit.score,
+        route=score.route, fit_grade=score.fit.grade, fit_score=score.fit.score,
         stakeholder=score.fit.stakeholder, intent_score=score.intent.score,
         signal_type=research.signal_type, top_signal=research.top_signal,
-        email_draft=email_body, disqualification_reason=None, crm=crm,
-        source_url=research.source_url, **display,
+        email_draft=email_body, disqualification_reason=score.disqualification_reason,
+        crm=crm, source_url=research.source_url, **display,
     )

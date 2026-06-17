@@ -103,6 +103,15 @@ def test_disqualified_lead_skips_research_and_writes_disqualified_deal():
     assert "ICP fit C" in note_call[1]
 
 
+def test_numeric_apollo_revenue_is_formatted_as_string():
+    # Apollo returns annual_revenue as a number; the brief/schema expect a string.
+    org = {"organization": {**A_ORG["organization"], "annual_revenue": 5_120_000_000.0}}
+    result = run_inbound_pipeline(A_FORM, apollo=StubApollo(org, A_PERSON),
+                                  llm=StubLLM(), tavily=StubTavily(), hubspot=StubHubSpot())
+    assert result.revenue == "$5.1B"
+    assert isinstance(result.revenue, str)
+
+
 def test_exit_check_rejects_missing_email():
     with pytest.raises(ValueError):
         run_inbound_pipeline({"company_name": "X"}, apollo=StubApollo({}, {}),

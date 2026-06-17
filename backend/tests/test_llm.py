@@ -63,3 +63,11 @@ def test_llm_delegates_first_backend():
             return f"{system}|{user}|{max_tokens}"
 
     assert LLM([StubBackend()]).complete("S", "U", 50) == "S|U|50"
+
+
+def test_llm_forwards_reasoning_effort_to_backend():
+    class StubBackend:
+        def complete(self, system, user, max_tokens=1024, reasoning_effort=None):
+            return f"{reasoning_effort}"
+
+    assert LLM([StubBackend()]).complete("S", "U", reasoning_effort="minimal") == "minimal"

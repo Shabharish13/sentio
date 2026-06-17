@@ -46,12 +46,18 @@ class ApolloClient:
         cached = self._read_cache(path)
         if cached is not None:
             return cached
-        resp = self._http.post(
-            f"{self.BASE}/people/match",
-            headers={"X-Api-Key": self._key, "Content-Type": "application/json"},
-            json={"email": email, **fields},
-        )
-        resp.raise_for_status()
+        # Person enrichment is not on Apollo's free tier (/people/match -> 403).
+        # Degrade to an empty result so the pipeline keeps running on form data;
+        # the empty fallback is not cached so a paid upgrade retries the live call.
+        try:
+            resp = self._http.post(
+                f"{self.BASE}/people/match",
+                headers={"X-Api-Key": self._key, "Content-Type": "application/json"},
+                json={"email": email, **fields},
+            )
+            resp.raise_for_status()
+        except (httpx.HTTPStatusError, httpx.RequestError):
+            return {"person": {}}
         data = resp.json()
         self._write_cache(path, data)
         return data
@@ -61,12 +67,15 @@ class ApolloClient:
         cached = self._read_cache(path)
         if cached is not None:
             return cached
-        resp = self._http.get(
-            f"{self.BASE}/organizations/enrich",
-            params={"domain": domain},
-            headers={"X-Api-Key": self._key, "Accept": "application/json"},
-        )
-        resp.raise_for_status()
+        try:
+            resp = self._http.get(
+                f"{self.BASE}/organizations/enrich",
+                params={"domain": domain},
+                headers={"X-Api-Key": self._key, "Accept": "application/json"},
+            )
+            resp.raise_for_status()
+        except (httpx.HTTPStatusError, httpx.RequestError):
+            return {"organization": {}}
         data = resp.json()
         self._write_cache(path, data)
         return data

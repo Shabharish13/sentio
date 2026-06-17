@@ -23,6 +23,8 @@ def test_complete_parses_result_and_builds_argv():
     assert "--model" in args and "claude-sonnet-4-6" in args
     assert "--output-format" in args and "json" in args
     assert "--max-turns" in args and "1" in args
+    # Tools are disabled so the model answers directly (no tool-use turn).
+    assert "--tools" in args and args[args.index("--tools") + 1] == ""
 
 
 def test_complete_raises_on_is_error():

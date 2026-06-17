@@ -16,7 +16,8 @@ def test_headcount_bands_loaded():
     bands = load_headcount_bands()
     assert (100, 300, 25) in bands
     assert (51, 99, 10) in bands
-    assert len(bands) == 4
+    assert (2001, 999999, 0) in bands
+    assert len(bands) == 5
 
 
 def test_industry_map_loaded():

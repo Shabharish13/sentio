@@ -24,6 +24,9 @@ class Settings(BaseSettings):
     openai_model: str = "gpt-5"
     claude_model: str = "claude-sonnet-4-6"
 
+    sdr_sender_name: str = "Alex"
+    sdr_booking_link: str = "https://calendly.com/sentio/15min"
+
 
 @lru_cache
 def get_settings() -> Settings:

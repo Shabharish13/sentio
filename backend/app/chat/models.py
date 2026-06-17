@@ -34,6 +34,7 @@ class ChatTurn:
 
     session_id: str
     reply: str
+    question: str | None
     outcome: str
     escalated: bool
     booked: bool
