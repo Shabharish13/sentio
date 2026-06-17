@@ -21,9 +21,12 @@ Collect these self-reported signals when present (omit if not yet revealed):
 use_case, team_context, authority, timeline, company_scale, email.
 
 Outcomes (pick exactly one):
-- "book": company scale >= ~50 people AND a champion/decision-maker role
-  (CS leader, RevOps, C-suite) AND an active/this-quarter timeline. Requires the
-  visitor's work email — set "email" when they have shared one.
+- "book": EITHER (a) the visitor EXPLICITLY asks for a demo, to book/schedule a
+  meeting, to get started, or uses similar direct purchase intent — trigger "book"
+  immediately without requiring other qualifying signals; OR (b) company scale >= ~50
+  people AND a champion/decision-maker role (CS leader, RevOps, C-suite) AND an
+  active/this-quarter timeline. Requires the visitor's work email — set "email" when
+  they have shared one.
 - "disqualify": clearly outside the market — tiny/pre-revenue (<20, solo founder),
   non-commercial (student, personal project), or no CS function and no path to a
   buyer. Set "reason" to the specific disqualifier.
@@ -40,10 +43,9 @@ Outcomes (pick exactly one):
   involve a human, not just mention of a sensitive topic. Off-topic chatter, jokes,
   or unrelated questions are also "continue" (the assistant redirects them).
   ALSO NOT an escalation: wanting a demo, asking to "book a demo", "schedule a demo",
-  or "get started". A demo request is the Book path - return "continue" and keep
-  qualifying until company scale + champion role + active timeline are known, at which
-  point it becomes "book". Only route to a human via escalate for the (a)/(b)/(c)
-  triggers above.
+  or "get started". These are explicit booking signals — trigger "book" immediately
+  without further qualification. Only route to a human via escalate for the
+  (a)/(b)/(c) triggers above.
 - "nurture": genuine interest but timeline is exploratory or company is below the
   Book threshold.
 - "continue": none of the above yet (including off-topic messages) - keep

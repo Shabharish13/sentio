@@ -107,3 +107,20 @@ def test_classifier_prompt_excludes_demo_requests_from_escalation():
     text = CLASSIFIER_PROMPT.lower()
     assert "book a demo" in text
     assert "not an escalation" in text
+
+
+def test_classifier_prompt_treats_explicit_demo_request_as_book_not_continue():
+    """'I want a demo' must trigger book immediately — not gate on qualifying signals.
+    The three-signal requirement (scale + role + timeline) is for inferred intent only.
+    An explicit request bypasses it."""
+    from app.chat.outcome import CLASSIFIER_PROMPT
+    text = CLASSIFIER_PROMPT.lower()
+    # The old broken instruction — must NOT appear
+    assert "return \"continue\" and keep qualifying" not in text, (
+        "Prompt is still gatekeeping explicit demo requests behind qualification. "
+        "'I want a demo' must immediately trigger 'book', not 'continue'."
+    )
+    # The new correct instruction — must appear
+    assert "explicit" in text and "immediately" in text, (
+        "Prompt must instruct the classifier to trigger 'book' immediately on an explicit demo request."
+    )
