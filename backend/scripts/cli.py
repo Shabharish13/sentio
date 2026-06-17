@@ -89,8 +89,6 @@ def cmd_sage(args: argparse.Namespace) -> None:
     resp = answer(args.question, page=args.page, llm=_llm(), retriever=retriever)
     print(f"[redirected={resp.redirected}]  sources={resp.sources}")
     print(resp.answer)
-    if resp.question:
-        print(resp.question)
 
 
 # ---------------------------------------------------------------- pipeline

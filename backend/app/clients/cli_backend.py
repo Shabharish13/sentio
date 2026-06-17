@@ -41,9 +41,10 @@ class ClaudeCliBackend:
         self._runner = runner or _default_runner
         self._model = model or get_settings().claude_model
 
-    def complete(self, system: str, user: str, max_tokens: int = 1024) -> str:
-        # max_tokens is accepted for interface parity with the SDK backend; the
-        # headless CLI surface has no per-call output cap, so it is not enforced.
+    def complete(self, system: str, user: str, max_tokens: int = 1024,
+                 reasoning_effort: str | None = None) -> str:
+        # max_tokens / reasoning_effort are accepted for interface parity with the
+        # SDK backend; the headless CLI surface exposes neither, so they are ignored.
         args = [
             "claude",
             "-p",

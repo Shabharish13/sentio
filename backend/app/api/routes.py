@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 
 from app.api import deps
 from app.api.schemas import ChatRequest, ChatResponse, DemoRequest, LeadBrief
@@ -58,6 +58,7 @@ def demo(
 @router.post("/chat", response_model=ChatResponse)
 def chat(
     req: ChatRequest,
+    background_tasks: BackgroundTasks,
     store=Depends(deps.provide_store),
     llm=Depends(deps.provide_llm),
     retriever=Depends(deps.provide_retriever),
@@ -65,13 +66,15 @@ def chat(
     tavily=Depends(deps.provide_tavily),
     hubspot=Depends(deps.provide_hubspot),
 ) -> ChatResponse:
-    """Drive one Sage turn with server-side qualification state."""
+    """Drive one Sage turn with server-side qualification state. The terminal CRM
+    handoff is scheduled as a background task so the reply returns immediately."""
     if not req.message.strip():
         raise HTTPException(status_code=400, detail="message is required")
     state = store.get_or_create(req.session_id, page=req.page)
     try:
         turn = handle_turn(state, req.message, llm=llm, retriever=retriever,
-                           apollo=apollo, tavily=tavily, hubspot=hubspot)
+                           apollo=apollo, tavily=tavily, hubspot=hubspot,
+                           schedule=background_tasks.add_task)
     except Exception as exc:  # noqa: BLE001 — retrieval/LLM failure
         logger.exception("chat turn failed")
         raise HTTPException(status_code=502, detail="Sorry — I'm having trouble connecting right now.") from exc

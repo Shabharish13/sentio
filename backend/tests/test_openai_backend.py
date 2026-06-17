@@ -4,7 +4,7 @@ import respx
 from httpx import Response
 
 from app.clients.cli_backend import LLMError
-from app.clients.openai_backend import OpenAIBackend
+from app.clients.openai_backend import REASONING_HEADROOM, OpenAIBackend
 
 CHAT_URL = "https://api.openai.com/v1/chat/completions"
 
@@ -41,8 +41,34 @@ def test_complete_parses_choice_and_builds_request():
     assert out == "ok"
     body = route.calls.last.request.content.replace(b" ", b"")
     assert b'"model":"gpt-5"' in body
-    assert b'"max_completion_tokens":16' in body
     assert b'"role":"system"' in body and b'"role":"user"' in body
+
+
+@respx.mock
+def test_reasoning_headroom_is_added_to_token_budget():
+    # gpt-5 reasoning tokens count against max_completion_tokens; without headroom
+    # they exhaust a small budget and content comes back empty. The caller's
+    # max_tokens is the *content* budget — the backend adds room for reasoning.
+    route = respx.post(CHAT_URL).mock(return_value=Response(200, json=_completion_json("ok")))
+    OpenAIBackend(client=_sdk(), model="gpt-5").complete("s", "u", max_tokens=400)
+    body = route.calls.last.request.content.replace(b" ", b"")
+    assert f'"max_completion_tokens":{400 + REASONING_HEADROOM}'.encode() in body
+
+
+@respx.mock
+def test_reasoning_effort_sent_when_provided():
+    route = respx.post(CHAT_URL).mock(return_value=Response(200, json=_completion_json("ok")))
+    OpenAIBackend(client=_sdk(), model="gpt-5").complete("s", "u", reasoning_effort="minimal")
+    body = route.calls.last.request.content.replace(b" ", b"")
+    assert b'"reasoning_effort":"minimal"' in body
+
+
+@respx.mock
+def test_reasoning_effort_omitted_by_default():
+    route = respx.post(CHAT_URL).mock(return_value=Response(200, json=_completion_json("ok")))
+    OpenAIBackend(client=_sdk(), model="gpt-5").complete("s", "u")
+    body = route.calls.last.request.content.replace(b" ", b"")
+    assert b'reasoning_effort' not in body
 
 
 @respx.mock

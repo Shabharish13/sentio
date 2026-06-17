@@ -27,20 +27,42 @@ Outcomes (pick exactly one):
 - "disqualify": clearly outside the market — tiny/pre-revenue (<20, solo founder),
   non-commercial (student, personal project), or no CS function and no path to a
   buyer. Set "reason" to the specific disqualifier.
-- "escalate": a GENUINE sales-handoff trigger only - the visitor explicitly asks
-  to talk to a human/sales, OR raises custom/enterprise/volume pricing, OR raises
-  security review / legal / procurement / DPA / data migration / custom
-  integrations. Off-topic chatter, jokes, or unrelated questions are NOT an
-  escalation - those are just "continue" (the assistant redirects them).
+- "escalate": a GENUINE sales/human-handoff trigger only. Pick this ONLY when the
+  visitor (a) explicitly asks to talk to a human or sales, OR (b) raises
+  custom/enterprise/volume pricing, OR (c) wants to *initiate a process* that needs
+  a person - e.g. "we need to run a security review", "send us your DPA / security
+  questionnaire", "our procurement/legal team needs to engage", a data migration or
+  custom integration project.
+  CRITICAL: merely *asking a factual question* about security, compliance,
+  certifications (e.g. "are you SOC 2 certified?", "are you GDPR compliant?",
+  "do you support SSO?"), pricing, or features is NOT an escalation - Sage answers
+  those from its knowledge base, so they are "continue". Escalate needs intent to
+  involve a human, not just mention of a sensitive topic. Off-topic chatter, jokes,
+  or unrelated questions are also "continue" (the assistant redirects them).
 - "nurture": genuine interest but timeline is exploratory or company is below the
   Book threshold.
 - "continue": none of the above yet (including off-topic messages) - keep
   qualifying or redirect.
 
+Also choose the SINGLE next qualifying question to ask, as "next_question":
+- On "continue" or "nurture", pick ONE binary (A-or-B) question targeting a signal
+  NOT already in signals_so_far, phrased to feel natural given what was said.
+  Suggested phrasing by signal:
+  - use_case: "Is the main thing you're solving surprise churn, or giving your CS team a consistent view of account health?"
+  - team_context: "Are you on a customer success team, or more of a RevOps / operations role?"
+  - authority: "Are you evaluating this for your own team, or is there a broader group - finance, IT - who'd be involved?"
+  - timeline: "Is this something you're actively solving this quarter, or still in early research?"
+  - company_scale: "Are you working with a CS team of roughly 10 or fewer, or larger than that?"
+- Set "next_question" to null on "book", "escalate", and "disqualify" - never qualify
+  on a terminal turn - and whenever no question fits or every signal is collected.
+- Never repeat a question for a signal already in signals_so_far. Do not ask about
+  exact budget, headcount numbers, tech-stack, or security-questionnaire items.
+
 Respond with exactly one JSON object and nothing else:
 {"signals": {"use_case": "...", "timeline": "..."}, "outcome": "book",
- "email": "jane@acme.com", "reason": null}
-Include only the signal keys you actually have. Use null for email/reason when absent.
+ "email": "jane@acme.com", "reason": null, "next_question": null}
+Include only the signal keys you actually have. Use null for email/reason/next_question
+when absent.
 """
 
 
@@ -50,6 +72,9 @@ class OutcomeDecision:
     signals: dict[str, str] = field(default_factory=dict)
     email: str | None = None
     reason: str | None = None
+    # The single qualifying question to ask next, owned by the router (not Sage) so it
+    # can never contradict the outcome. Always None on a terminal outcome.
+    next_question: str | None = None
 
 
 def classify(history: list[dict[str, str]], signals: dict[str, str], llm) -> OutcomeDecision:
@@ -77,4 +102,15 @@ def classify(history: list[dict[str, str]], signals: dict[str, str], llm) -> Out
     if not isinstance(reason, str) or not reason.strip():
         reason = None
 
-    return OutcomeDecision(outcome=outcome, signals=merged, email=email, reason=reason)
+    next_question = data.get("next_question")
+    if not isinstance(next_question, str) or not next_question.strip():
+        next_question = None
+    else:
+        next_question = next_question.strip()
+    # Defense in depth: a terminal outcome never carries a qualifying question, so the
+    # close stays clean even if the model emits one against instructions.
+    if outcome in ("book", "escalate", "disqualify"):
+        next_question = None
+
+    return OutcomeDecision(outcome=outcome, signals=merged, email=email, reason=reason,
+                           next_question=next_question)

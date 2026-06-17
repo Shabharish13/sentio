@@ -50,3 +50,27 @@ def test_classify_rejects_non_email_strings():
     payload = json.dumps({"outcome": "continue", "email": "not-an-email"})
     d = classify([], {}, StubLLM(payload))
     assert d.email is None
+
+
+def test_classify_returns_next_question_on_continue():
+    # The router owns the next qualifying question now (decoupled from Sage's answer).
+    payload = json.dumps({"outcome": "continue",
+                          "next_question": "Are you on a CS team or RevOps?"})
+    d = classify([], {}, StubLLM(payload))
+    assert d.next_question == "Are you on a CS team or RevOps?"
+
+
+def test_classify_nulls_next_question_on_every_terminal_outcome():
+    # A terminal outcome never carries a qualifying question - even if the model emits
+    # one against instructions, the close stays clean. This is the fix for the
+    # double-ask bug (email request + a contradictory plan question on the same turn).
+    for outcome in ("book", "escalate", "disqualify"):
+        payload = json.dumps({"outcome": outcome, "email": "x@acme.com",
+                              "next_question": "Growth with a pilot, or Starter annual?"})
+        d = classify([], {}, StubLLM(payload))
+        assert d.next_question is None, outcome
+
+
+def test_classify_blank_next_question_is_none():
+    d = classify([], {}, StubLLM(json.dumps({"outcome": "continue", "next_question": "  "})))
+    assert d.next_question is None

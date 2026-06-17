@@ -26,7 +26,10 @@ class AnthropicClient:
         self._client = client or anthropic.Anthropic(api_key=settings.anthropic_api_key)
         self._model = model or settings.claude_model
 
-    def complete(self, system: str, user: str, max_tokens: int = 1024) -> str:
+    def complete(self, system: str, user: str, max_tokens: int = 1024,
+                 reasoning_effort: str | None = None) -> str:
+        # reasoning_effort is accepted for interface parity with the OpenAI backend;
+        # it is OpenAI-specific, so it is ignored here.
         response = self._client.messages.create(
             model=self._model,
             max_tokens=max_tokens,
