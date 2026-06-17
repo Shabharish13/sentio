@@ -143,8 +143,13 @@ def cmd_pipeline(args: argparse.Namespace) -> None:
     else:
         hubspot = _DryRunHubSpot()
 
-    result = run_inbound_pipeline(form, apollo=apollo, llm=_llm(),
-                                  tavily=TavilyClient(max_calls=3), hubspot=hubspot)
+    try:
+        result = run_inbound_pipeline(form, apollo=apollo, llm=_llm(),
+                                      tavily=TavilyClient(max_calls=3), hubspot=hubspot)
+    except ValueError as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        raise SystemExit(1) from None
+
     print(json.dumps({
         "route": result.route, "fit_grade": result.fit_grade, "fit_score": result.fit_score,
         "stakeholder": result.stakeholder, "intent_score": result.intent_score,
