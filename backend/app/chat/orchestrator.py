@@ -32,6 +32,22 @@ BOOK_EMAIL_PROMPT = (
     "demo details to?"
 )
 
+# Confirmation lead-ins used once a terminal outcome fires WITH an email in hand, so
+# the visitor-facing reply matches what the runtime actually did (no "I can't capture
+# emails" contradictions).
+_CONFIRMATION_REPLIES = {
+    "book": "Perfect - I've shared your details with our team and they'll reach out "
+            "shortly to set up your demo.",
+    "escalate": "Thanks - I've passed your details and this conversation to our team, "
+                "and a rep will follow up with you directly.",
+    "disqualify": "Thanks for sharing - I've noted your details for our team. "
+                  "Appreciate you taking the time.",
+}
+
+
+def _confirmation_reply(outcome: str) -> str:
+    return _CONFIRMATION_REPLIES.get(outcome, ESCALATION_REDIRECT_REPLY)
+
 
 def _assistant_utterance(reply: str, question: str | None) -> str:
     """What the visitor actually saw this turn: the answer plus its qualifying question
@@ -158,55 +174,54 @@ def handle_turn(state: QualificationState, message: str, *,
         sage = sage_future.result()
         decision = decision_future.result()
 
-    # Off-topic / low retrieval confidence stays in the conversation with no terminal
-    # action — UNLESS the classifier detected a genuine handoff intent ("talk to a
-    # human", a security review). Such asks retrieve no KB content so Sage redirects,
-    # but bouncing them with the off-topic message would drop a real escalation.
-    if sage.redirected and decision.outcome != "escalate":
+    # Email + signals are resolved on EVERY turn (even a redirected one) so a terminal
+    # action is never dropped. Email presence is decided in code (regex), classifier
+    # field as fallback.
+    state.signals.update(decision.signals)
+    email = extract_email(message) or decision.email
+    if email and not state.email:
+        state.email = email
+
+    terminal = decision.outcome in ("book", "escalate", "disqualify")
+
+    # An off-topic / low-confidence redirect only stands on a NON-terminal turn. A real
+    # book/escalate/disqualify retrieves no KB content (so Sage redirects) but must
+    # survive instead of being bounced with the off-topic message.
+    if sage.redirected and not terminal:
         state.outcome = "continue"
-        # An off-topic redirect carries no qualifying question - the redirect message
-        # already invites the visitor back to Sentio topics.
         state.add("assistant", _assistant_utterance(sage.answer, None))
         return ChatTurn(session_id=state.session_id, reply=sage.answer,
                         question=None, outcome="continue", escalated=False,
                         booked=False, sources=[])
 
-    state.signals.update(decision.signals)
-    # Deterministic email gate: a regex on the visitor's message decides whether we
-    # have an email, falling back to the classifier's field only if code found none.
-    email = extract_email(message) or decision.email
-    if email and not state.email:
-        state.email = email
     state.outcome = decision.outcome
 
-    # On a redirect we're honoring as an escalation, Sage only produced the off-topic
-    # message — replace it with a handoff lead-in and drop the (empty) KB citations.
+    # Base reply: a redirected terminal turn produced only the off-topic message, so
+    # swap in a handoff lead-in; otherwise use Sage's grounded answer.
     reply = ESCALATION_REDIRECT_REPLY if sage.redirected else sage.answer
-    # The qualifying question is owned by the router, which already nulls it on every
-    # terminal outcome - so it can never contradict a book/escalate/disqualify close.
-    # Dropped on a redirect (we're steering the visitor, not qualifying them).
-    question = None if sage.redirected else decision.next_question
+    # The qualifying question is owned by the router and is always None on a terminal
+    # outcome, so it can never contradict a book/escalate/disqualify close. Dropped on
+    # a redirect (we're steering the visitor, not qualifying them).
+    question = None if (sage.redirected or terminal) else decision.next_question
     sources = [] if sage.redirected else sage.sources
 
-    wants_escalation = decision.outcome == "escalate"
-    if wants_escalation and not state.email:
-        # No email yet: ask for one so a rep can follow up (no fake live handoff).
-        reply = reply.rstrip() + ESCALATION_EMAIL_PROMPT
-    if decision.outcome == "book" and not state.email:
-        # Qualified to book but no email yet: ask for it so the Book pipeline can run.
-        reply = reply.rstrip() + BOOK_EMAIL_PROMPT
+    booked = decision.outcome == "book" and state.email is not None
+    escalated = decision.outcome == "escalate" and state.email is not None
 
-    # Hand off the terminal CRM action off the reply path. It only fires once we have
-    # the email (the deterministic gate above) — the chatbot has finished collecting.
-    if decision.outcome in ("book", "disqualify", "escalate") and state.email:
+    if terminal and state.email:
+        # Everything needed is in hand: confirm the handoff (so the reply matches the
+        # action) and run the CRM pipeline off the reply path.
+        reply = _confirmation_reply(decision.outcome)
+        sources = []
         schedule(_terminal_action(state, decision, llm=llm, apollo=apollo,
                                   tavily=tavily, hubspot=hubspot))
-
-    # booked/escalated report what ACTUALLY happened, so the UI badge never claims a
-    # handoff that didn't occur: both require a captured email. The CRM write itself
-    # runs off the reply path (optimistic — failures are logged, not surfaced).
-    booked = decision.outcome == "book" and state.email is not None
-    escalated = wants_escalation and state.email is not None
+    elif decision.outcome == "book":
+        # Qualified to book but no email yet: ask for it so the Book pipeline can run.
+        reply = reply.rstrip() + BOOK_EMAIL_PROMPT
+    elif decision.outcome == "escalate":
+        # No email yet: ask for one so a rep can follow up (no fake live handoff).
+        reply = reply.rstrip() + ESCALATION_EMAIL_PROMPT
+    # disqualify without an email: warm close, no email ask (SDD: don't push for it).
 
     state.add("assistant", _assistant_utterance(reply, question))
     return ChatTurn(session_id=state.session_id, reply=reply, question=question,

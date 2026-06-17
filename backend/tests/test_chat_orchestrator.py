@@ -340,6 +340,35 @@ def test_deterministic_email_from_message_triggers_handoff_without_classifier_em
     assert turn.booked is True
 
 
+def test_book_redirected_with_email_is_not_bounced_and_books():
+    # The reported bug: a short booking confirmation ("ok book it, me@acme.com")
+    # retrieves no KB content so Sage redirects - but it's a real Book and must NOT be
+    # swallowed by the off-topic guard.
+    hubspot = StubHubSpot()
+    payload = json.dumps({"outcome": "book", "email": "me@acme.com",
+                          "signals": {"authority": "VP CS", "company_scale": "200+"}})
+    turn = handle_turn(_state(), "ok book it, me@acme.com", llm=StubLLM(payload),
+                       retriever=StubRetriever(0.10),  # below threshold -> redirected
+                       apollo=StubApollo(), tavily=StubTavily(), hubspot=hubspot)
+    assert turn.booked is True
+    assert turn.reply != REDIRECT_MESSAGE
+    assert any(c[0] == "deal" for c in hubspot.calls)
+
+
+def test_terminal_reply_confirms_and_does_not_contradict_action():
+    # When a deal is actually written, the reply confirms the handoff instead of
+    # claiming it cannot capture emails.
+    hubspot = StubHubSpot()
+    payload = json.dumps({"outcome": "escalate", "email": "ciso@bigco.com"})
+    turn = handle_turn(_state(), "we need a security review, ciso@bigco.com",
+                       llm=StubLLM(payload), retriever=StubRetriever(0.55),
+                       apollo=StubApollo(), tavily=StubTavily(), hubspot=hubspot)
+    assert turn.escalated is True
+    low = turn.reply.lower()
+    assert "cannot" not in low and "can't" not in low
+    assert "team" in low  # confirms the handoff happened
+
+
 def test_book_without_email_asks_for_email_no_crm():
     # A qualified booker with no email yet must be ASKED for it (the Book pipeline
     # needs it). Previously the book branch said nothing and the lead dead-ended.
