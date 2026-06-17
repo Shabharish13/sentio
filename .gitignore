@@ -13,8 +13,18 @@ venv/
 node_modules/
 .next/
 
-# Local caches
-cache/
+# Local caches (real API responses — never commit; test fixtures below are exceptions)
+cache/*
+!cache/apollo/
+cache/apollo/*
+!cache/apollo/org_nimbuscs.io.json
+!cache/apollo/person_marcus.wong_at_nimbuscs.io.json
+!cache/apollo/org_leapfroganalytics.co.uk.json
+!cache/apollo/person_claire.hassan_at_leapfroganalytics.co.uk.json
+!cache/apollo/org_vertexhr.com.json
+!cache/apollo/person_raj.pillai_at_vertexhr.com.json
+!cache/apollo/org_harborviewfreight.com.json
+!cache/apollo/person_priya.sharma_at_harborviewfreight.com.json
 *.local.json
 backend/.chroma/
 
