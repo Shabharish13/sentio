@@ -90,8 +90,9 @@ def _chat_note(state: QualificationState) -> str:
 
 
 def _book(state: QualificationState, *, apollo, llm, tavily, hubspot) -> CrmResult:
-    """Book outcome: run the same enrich -> score -> research -> CRM pipeline the
-    form path uses, then attach the chat transcript as a second deal note."""
+    """Book outcome: run the full enrich -> score -> research -> CRM pipeline.
+    Qualifying signals collected by Sage are mapped into the form so the SDR
+    hand-off note reflects what the visitor told us during chat."""
     form = {
         "first_name": "",
         "last_name": "",
@@ -103,7 +104,6 @@ def _book(state: QualificationState, *, apollo, llm, tavily, hubspot) -> CrmResu
         "how_heard": "Website chat (Sage)",
     }
     result = run_inbound_pipeline(form, apollo=apollo, llm=llm, tavily=tavily, hubspot=hubspot)
-    hubspot.create_note(_chat_note(state), deal_id=result.crm.deal_id)
     return result.crm
 
 
@@ -119,6 +119,7 @@ def _disqualify(state: QualificationState, reason: str | None, *, hubspot) -> Cr
         deal_name=f"{_company_name(state)} — chat inbound",
         route="disqualified",
         note_body=note,
+        deal_priority="LOW",
         hubspot=hubspot,
     )
 
@@ -138,6 +139,7 @@ def _escalate(state: QualificationState, *, hubspot) -> CrmResult:
         deal_name=f"{_company_name(state)} - chat escalation",
         route="qualified",
         note_body=note,
+        deal_priority="HIGH",
         hubspot=hubspot,
     )
 

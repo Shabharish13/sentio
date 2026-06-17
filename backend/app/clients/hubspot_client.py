@@ -68,13 +68,20 @@ class HubSpotClient:
         results = resp.json().get("results", [])
         return results[0]["id"] if results else None
 
-    def upsert_deal(self, name: str, stage: str, contact_id: str) -> str:
+    def upsert_deal(self, name: str, stage: str, contact_id: str,
+                    priority: str | None = None, amount: float | None = None) -> str:
+        props: dict = {"dealstage": stage, "pipeline": self._pipeline}
+        if priority:
+            props["priority"] = priority
+        if amount is not None:
+            props["amount"] = str(int(float(amount)))
+
         existing = self._find_deal_id(name)
         if existing:
             resp = self._http.patch(
                 f"{self.BASE}/crm/v3/objects/deals/{existing}",
                 headers=self._headers(),
-                json={"properties": {"dealstage": stage, "pipeline": self._pipeline}},
+                json={"properties": props},
             )
             resp.raise_for_status()
             return existing
@@ -83,11 +90,7 @@ class HubSpotClient:
             f"{self.BASE}/crm/v3/objects/deals",
             headers=self._headers(),
             json={
-                "properties": {
-                    "dealname": name,
-                    "pipeline": self._pipeline,
-                    "dealstage": stage,
-                },
+                "properties": {"dealname": name, **props},
                 "associations": [
                     {
                         "to": {"id": contact_id},

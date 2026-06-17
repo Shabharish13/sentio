@@ -30,13 +30,58 @@ def _format_revenue(value) -> str | None:
     return f"${amount:,.0f}"
 
 
-def _handoff_note(score, research, email_body: str) -> str:
+def _deal_priority(grade: str) -> str:
+    if grade == "A":
+        return "HIGH"
+    if grade == "B":
+        return "MEDIUM"
+    return "LOW"
+
+
+def _handoff_note(score, research, email_body: str, display: dict) -> str:
+    company   = display.get("company_name") or "Unknown"
+    industry  = display.get("industry") or "n/a"
+    headcount = display.get("headcount") or "n/a"
+    revenue   = display.get("revenue") or "n/a"
+    c_name    = display.get("contact_name") or "Unknown"
+    c_title   = display.get("contact_title") or "n/a"
+
+    score_detail = "  ".join(
+        f"{k.replace('_', ' ').title()} {v}pts"
+        for k, v in score.fit.breakdown.items()
+    )
+
+    if research.top_signal:
+        signal_block = (
+            f"\nWHY NOW - {research.signal_type.upper()}\n"
+            f"  {research.top_signal}\n"
+            f"  Source: {research.source_url or 'n/a'}"
+        )
+    else:
+        signal_block = "\nWHY NOW - no signal found (lead with company stage and vertical)"
+
+    edge_block = (
+        "\n*** EDGE FIT - headcount above ICP sweet spot. "
+        "Confirm a strong CS champion before outreach. ***"
+        if score.route == "edge_fit" else ""
+    )
+
     return (
-        f"SDR hand-off — persona: {score.fit.stakeholder}; "
-        f"ICP: {score.fit.grade}/{score.fit.score}; "
-        f"intent: {score.intent.score} ({score.intent.band}); "
-        f"why-now: {research.top_signal or 'none'} ({research.signal_type}); "
-        f"source: {research.source_url or 'n/a'}.\n\nDraft email (for SDR review):\n{email_body}"
+        f"=== SDR HAND-OFF ===\n"
+        f"\nCOMPANY\n"
+        f"  {company}  |  {industry}  |  {headcount} employees  |  ARR {revenue}\n"
+        f"\nCONTACT\n"
+        f"  {c_name}  -  {c_title}\n"
+        f"  Buyer type: {score.fit.stakeholder}\n"
+        f"\nICP SCORE: {score.fit.grade}  ({score.fit.score}/100)  |  "
+        f"Intent: {score.intent.score} ({score.intent.band})\n"
+        f"  {score_detail}"
+        f"{edge_block}"
+        f"{signal_block}\n"
+        f"\nDRAFT EMAIL - review before sending\n"
+        f"{'-' * 40}\n"
+        f"{email_body}\n"
+        f"{'-' * 40}"
     )
 
 
@@ -56,9 +101,10 @@ def run_inbound_pipeline(form: dict, *, apollo, llm, tavily, hubspot) -> Pipelin
     score = score_lead(lead)
 
     name = deal_name(form)
-    props = contact_props(form)
+    props = contact_props(form, org)
     org_fields = org.get("organization") or {}
     person_fields = person.get("person") or {}
+    annual_revenue = org_fields.get("annual_revenue") or org_fields.get("organization_revenue")
     full_name = f"{form.get('first_name', '')} {form.get('last_name', '')}".strip()
     display = dict(
         contact_name=full_name,
@@ -73,7 +119,8 @@ def run_inbound_pipeline(form: dict, *, apollo, llm, tavily, hubspot) -> Pipelin
 
     if score.route == "disqualified":
         crm = sync_to_crm(email=email, contact_props=props, deal_name=name,
-                          route="disqualified", note_body=score.disqualification_reason, hubspot=hubspot)
+                          route="disqualified", note_body=score.disqualification_reason,
+                          deal_priority="LOW", annual_revenue=annual_revenue, hubspot=hubspot)
         return PipelineResult(
             route="disqualified", fit_grade=score.fit.grade, fit_score=score.fit.score,
             stakeholder=score.fit.stakeholder, intent_score=score.intent.score,
@@ -89,13 +136,12 @@ def run_inbound_pipeline(form: dict, *, apollo, llm, tavily, hubspot) -> Pipelin
         problem_stated=form.get("problem_stated") or "",
     )
     email_body = write_email(brief, llm=llm)
-    note = _handoff_note(score, research, email_body)
-
-    if score.route == "edge_fit":
-        note = f"[EDGE FIT — review before outreach]\n{score.disqualification_reason}\n\n{note}"
+    note = _handoff_note(score, research, email_body, display)
 
     crm = sync_to_crm(email=email, contact_props=props, deal_name=name,
-                      route=score.route, note_body=note, hubspot=hubspot)
+                      route=score.route, note_body=note,
+                      deal_priority=_deal_priority(score.fit.grade),
+                      annual_revenue=annual_revenue, hubspot=hubspot)
     return PipelineResult(
         route=score.route, fit_grade=score.fit.grade, fit_score=score.fit.score,
         stakeholder=score.fit.stakeholder, intent_score=score.intent.score,

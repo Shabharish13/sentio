@@ -5,11 +5,13 @@ from app.config import get_settings
 
 
 def sync_to_crm(*, email: str, contact_props: dict, deal_name: str, route: str,
-                note_body: str, hubspot) -> CrmResult:
+                note_body: str, deal_priority: str = "MEDIUM",
+                annual_revenue: float | None = None, hubspot) -> CrmResult:
     """Upsert the contact + deal and attach a (mandatory) note.
 
-    Stage is set by the routing outcome: qualified -> demo-requested, otherwise
-    -> disqualified. A deal is never written without a note (design constraint).
+    Stage is set by the routing outcome: qualified/edge_fit -> demo-requested,
+    otherwise -> disqualified. A deal is never written without a note (design
+    constraint). Priority and annual revenue are set on the deal when provided.
     """
     if not note_body or not note_body.strip():
         raise ValueError("note_body is mandatory — a deal must never be written without a note")
@@ -21,6 +23,9 @@ def sync_to_crm(*, email: str, contact_props: dict, deal_name: str, route: str,
         else settings.hubspot_stage_disqualified
     )
     contact_id = hubspot.upsert_contact(email, contact_props)
-    deal_id = hubspot.upsert_deal(name=deal_name, stage=stage, contact_id=contact_id)
+    deal_id = hubspot.upsert_deal(
+        name=deal_name, stage=stage, contact_id=contact_id,
+        priority=deal_priority, amount=annual_revenue,
+    )
     note_id = hubspot.create_note(note_body, deal_id=deal_id)
     return CrmResult(contact_id=contact_id, deal_id=deal_id, stage=stage, note_id=note_id)

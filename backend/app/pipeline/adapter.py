@@ -97,12 +97,24 @@ def build_record(form: dict, org: dict, person: dict) -> dict:
     }
 
 
-def contact_props(form: dict) -> dict:
-    return {
+def contact_props(form: dict, org: dict | None = None) -> dict:
+    o = _org(org or {})
+    props: dict = {
         "firstname": form.get("first_name", ""),
         "lastname": form.get("last_name", ""),
         "jobtitle": form.get("job_title", ""),
+        "company": form.get("company_name", ""),
     }
+    revenue = o.get("annual_revenue") or o.get("organization_revenue")
+    if revenue:
+        props["annualrevenue"] = str(int(float(revenue)))
+    employees = o.get("estimated_num_employees")
+    if employees:
+        props["numemployees"] = str(employees)
+    industry = o.get("industry")
+    if industry:
+        props["industry"] = industry
+    return props
 
 
 def deal_name(form: dict) -> str:

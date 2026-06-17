@@ -279,13 +279,9 @@ This address/domain has a local Apollo cache entry, so repeat tests should avoid
 
 Expected:
 
-- Lead brief renders in the browser.
-- Fit grade A for the cached NimbusCS lead.
-- Score breakdown should reflect the same CMO logic: 100-300 employee sweet spot, Computer Software, VP Customer Success, United States, B2B/SaaS.
-- Research signal appears when available.
-- Draft email appears.
-- HubSpot deal is in demo-requested stage.
-- HubSpot note contains SDR handoff details.
+- Browser shows a "Request received" confirmation screen. The full pipeline runs in the background.
+- HubSpot deal is in demo-requested stage (stage `3832955632`).
+- HubSpot deal note contains: fit grade A, score breakdown (100-300 employee sweet spot, Computer Software, VP Customer Success, United States, B2B/SaaS), research signal, and SDR draft email.
 
 ### Flow 2: Demo Form, Disqualified Lead
 
@@ -298,11 +294,9 @@ Go to `/demo` and submit:
 
 Expected:
 
-- Route is `disqualified`.
-- No draft email is generated.
-- Disqualification reason is shown.
-- HubSpot deal is in disqualified stage.
-- HubSpot note explains why.
+- Browser shows the same "Request received" confirmation (the visitor always sees a clean screen).
+- HubSpot deal is in disqualified stage (stage `3840698071`).
+- HubSpot note explains why: failed ICP dimensions, no draft email generated.
 
 ### Flow 3: Demo Form, Invalid Email
 

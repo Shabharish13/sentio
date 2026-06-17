@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { demoPage, SIZE_TO_BAND } from "@/lib/sentio";
-import { postDemo, type DemoRequest, type LeadBrief } from "@/lib/api";
+import { postDemo, type DemoRequest } from "@/lib/api";
 
 const EMPTY: DemoRequest = {
   first_name: "",
@@ -20,7 +20,6 @@ type Status = "idle" | "loading" | "done" | "error";
 export default function DemoPage() {
   const [form, setForm] = useState<DemoRequest>(EMPTY);
   const [status, setStatus] = useState<Status>("idle");
-  const [brief, setBrief] = useState<LeadBrief | null>(null);
 
   function set<K extends keyof DemoRequest>(key: K, value: DemoRequest[K]) {
     setForm((f) => ({ ...f, [key]: value }));
@@ -34,8 +33,7 @@ export default function DemoPage() {
         ...form,
         company_size: SIZE_TO_BAND[form.company_size] ?? form.company_size,
       };
-      const result = await postDemo(payload);
-      setBrief(result);
+      await postDemo(payload);
       setStatus("done");
     } catch {
       setStatus("error");
@@ -44,7 +42,6 @@ export default function DemoPage() {
 
   function reset() {
     setForm(EMPTY);
-    setBrief(null);
     setStatus("idle");
   }
 
@@ -67,10 +64,10 @@ export default function DemoPage() {
           </ul>
         </div>
 
-        {/* Right column: form / brief / error */}
+        {/* Right column: form / confirmation / error */}
         <div>
-          {status === "done" && brief ? (
-            <LeadBriefView brief={brief} onReset={reset} />
+          {status === "done" ? (
+            <ConfirmationView onReset={reset} />
           ) : (
             <DemoForm
               form={form}
@@ -167,6 +164,25 @@ function DemoForm({
       <p className="mt-3 text-xs text-faint">{demoPage.submitCaption}</p>
       {error && <p className="mt-3 text-sm font-medium text-risk">{demoPage.errorFallback}</p>}
     </form>
+  );
+}
+
+function ConfirmationView({ onReset }: { onReset: () => void }) {
+  return (
+    <div className="rounded-2xl border border-line bg-white p-10 text-center">
+      <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-full bg-brand/10">
+        <svg className="h-7 w-7 text-brand" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+        </svg>
+      </div>
+      <h2 className="text-xl font-bold text-ink">Request received</h2>
+      <p className="mt-3 text-sm text-muted">
+        We've got your request and our team will be in touch shortly to schedule your demo.
+      </p>
+      <button onClick={onReset} className="btn-primary mt-8">
+        Submit another request
+      </button>
+    </div>
   );
 }
 

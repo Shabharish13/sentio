@@ -65,27 +65,26 @@ Say while submitting:
 
 "Here I am acting as a buyer who looks very similar to Sentio's ICP: a VP of Customer Success at a mid-market B2B SaaS company, with a clear churn-related pain.
 
-When this comes in, the system enriches the company, scores the fit, and decides the route before an SDR ever touches it."
+When this form submits, the buyer sees exactly what you'd want them to see: a clean confirmation. Everything else — enrichment, scoring, research, email drafting, CRM — runs in the background."
 
-After result appears:
+After the confirmation screen appears, switch to HubSpot:
 
-"This is the part that matters for the CMO and Sales leader. The lead is not just marked 'hot' in a vague way. The score is explainable.
+"This is what the SDR sees. The lead is not just marked 'hot' in a vague way. The score is explainable.
 
 NimbusCS is in the 100-300 employee sweet spot, it is Computer Software, it is US-based, it has B2B/SaaS signals, and Marcus is the right champion persona. That produces an A-grade lead.
 
-The SDR now gets the fit score, the reason this account matters, a research-backed 'why now' signal, and a draft email. So follow-up can happen faster, and it starts from context instead of a blank CRM record."
+The SDR gets the fit score, the reason this account matters, a research-backed 'why now' signal, and a draft email — before they've ever opened the record for the first time."
 
-Point out on screen:
+Point out in HubSpot:
 
-- Fit grade and score breakdown.
-- Route.
-- Research signal.
+- Fit grade and score breakdown in the deal note.
+- Research signal with source.
 - Draft email.
-- HubSpot reference.
+- Deal stage: demo-requested.
 
 ### 2:10-2:45 - Show Why Bad-Fit Leads Do Not Waste Sales Time
 
-Submit or describe a poor-fit lead:
+Submit a poor-fit lead on the form (or reference the HubSpot disqualified stage if time is tight):
 
 - Company size: 1-10
 - Title: Student or Office Manager
@@ -95,9 +94,11 @@ Say:
 
 "The second thing I wanted to protect is Sales capacity.
 
-If a lead scores below 30 points, it is a C-grade lead. That lead does not go through research or email generation, and it does not get treated like an urgent SDR task.
+If a lead scores below 30 points, it is a C-grade lead. They get the same 'request received' confirmation — we are not rude about it — but they do not go through research or email generation, and they do not land in the SDR's queue.
 
-But it is also not lost. It still gets written to HubSpot with the disqualification reason. That gives Marketing an audit trail: you can see what is being filtered out, tune the ICP later, and avoid the black box problem."
+They are still logged. In HubSpot you can see exactly why this lead was filtered: which ICP dimension failed, what the score was, what the routing decision was. Marketing gets the audit trail, Sales does not get the noise."
+
+Switch to HubSpot disqualified stage to show the deal note.
 
 ### 2:45-4:10 - Show Sage Turning Chat Into Pipeline
 
