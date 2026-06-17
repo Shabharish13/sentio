@@ -15,7 +15,7 @@ const EMPTY: DemoRequest = {
   how_heard: "",
 };
 
-type Status = "idle" | "loading" | "done" | "error";
+type Status = "idle" | "done";
 
 export default function DemoPage() {
   const [form, setForm] = useState<DemoRequest>(EMPTY);
@@ -25,19 +25,14 @@ export default function DemoPage() {
     setForm((f) => ({ ...f, [key]: value }));
   }
 
-  async function onSubmit(e: React.FormEvent) {
+  function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setStatus("loading");
-    try {
-      const payload = {
-        ...form,
-        company_size: SIZE_TO_BAND[form.company_size] ?? form.company_size,
-      };
-      await postDemo(payload);
-      setStatus("done");
-    } catch {
-      setStatus("error");
-    }
+    const payload = {
+      ...form,
+      company_size: SIZE_TO_BAND[form.company_size] ?? form.company_size,
+    };
+    postDemo(payload); // fire and forget — pipeline runs in background
+    setStatus("done");
   }
 
   function reset() {
@@ -73,8 +68,6 @@ export default function DemoPage() {
               form={form}
               set={set}
               onSubmit={onSubmit}
-              loading={status === "loading"}
-              error={status === "error"}
             />
           )}
         </div>
@@ -87,14 +80,10 @@ function DemoForm({
   form,
   set,
   onSubmit,
-  loading,
-  error,
 }: {
   form: DemoRequest;
   set: <K extends keyof DemoRequest>(key: K, value: DemoRequest[K]) => void;
   onSubmit: (e: React.FormEvent) => void;
-  loading: boolean;
-  error: boolean;
 }) {
   const field = "w-full rounded-lg border border-line px-3 py-2 text-sm outline-none focus:border-brand";
   return (
@@ -158,11 +147,10 @@ function DemoForm({
         </select>
       </div>
 
-      <button type="submit" disabled={loading} className="btn-primary mt-6 w-full disabled:opacity-60">
-        {loading ? demoPage.submitting : demoPage.submit}
+      <button type="submit" className="btn-primary mt-6 w-full">
+        {demoPage.submit}
       </button>
       <p className="mt-3 text-xs text-faint">{demoPage.submitCaption}</p>
-      {error && <p className="mt-3 text-sm font-medium text-risk">{demoPage.errorFallback}</p>}
     </form>
   );
 }
