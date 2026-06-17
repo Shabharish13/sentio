@@ -90,12 +90,16 @@ def run_inbound_pipeline(form: dict, *, apollo, llm, tavily, hubspot) -> Pipelin
     )
     email_body = write_email(brief, llm=llm)
     note = _handoff_note(score, research, email_body)
+
+    if score.route == "edge_fit":
+        note = f"[EDGE FIT — review before outreach]\n{score.disqualification_reason}\n\n{note}"
+
     crm = sync_to_crm(email=email, contact_props=props, deal_name=name,
-                      route="qualified", note_body=note, hubspot=hubspot)
+                      route=score.route, note_body=note, hubspot=hubspot)
     return PipelineResult(
-        route="qualified", fit_grade=score.fit.grade, fit_score=score.fit.score,
+        route=score.route, fit_grade=score.fit.grade, fit_score=score.fit.score,
         stakeholder=score.fit.stakeholder, intent_score=score.intent.score,
         signal_type=research.signal_type, top_signal=research.top_signal,
-        email_draft=email_body, disqualification_reason=None, crm=crm,
-        source_url=research.source_url, **display,
+        email_draft=email_body, disqualification_reason=score.disqualification_reason,
+        crm=crm, source_url=research.source_url, **display,
     )
