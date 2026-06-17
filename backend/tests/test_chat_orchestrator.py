@@ -338,3 +338,20 @@ def test_deterministic_email_from_message_triggers_handoff_without_classifier_em
                        tavily=StubTavily(), hubspot=hubspot)
     assert state.email == "dana@gitlab.com"
     assert turn.booked is True
+
+
+def test_book_without_email_asks_for_email_no_crm():
+    # A qualified booker with no email yet must be ASKED for it (the Book pipeline
+    # needs it). Previously the book branch said nothing and the lead dead-ended.
+    hubspot = StubHubSpot()
+    payload = json.dumps({"outcome": "book",
+                          "signals": {"authority": "VP of Customer Success",
+                                      "timeline": "this quarter", "company_scale": "200+"}})
+    turn = handle_turn(_state(), "yes, I'd like to book a demo", llm=StubLLM(payload),
+                       retriever=StubRetriever(0.55), apollo=StubApollo(),
+                       tavily=StubTavily(), hubspot=hubspot)
+    assert turn.outcome == "book"
+    assert turn.booked is False           # no email captured yet
+    assert "work email" in turn.reply     # email-capture ask appended
+    assert turn.question is None          # terminal: no qualifying question
+    assert hubspot.calls == []            # nothing written without an email

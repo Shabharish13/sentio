@@ -25,6 +25,13 @@ ESCALATION_EMAIL_PROMPT = (
 # bouncing them; the email prompt above is appended when no email is on file yet.
 ESCALATION_REDIRECT_REPLY = "That's something our team can help you with directly."
 
+# Asked for on a Book outcome when we don't yet have the visitor's email — the Book
+# pipeline (enrich -> score -> research -> CRM) needs it to run.
+BOOK_EMAIL_PROMPT = (
+    " Happy to set that up - what's the best work email for our team to send the "
+    "demo details to?"
+)
+
 
 def _assistant_utterance(reply: str, question: str | None) -> str:
     """What the visitor actually saw this turn: the answer plus its qualifying question
@@ -185,6 +192,9 @@ def handle_turn(state: QualificationState, message: str, *,
     if wants_escalation and not state.email:
         # No email yet: ask for one so a rep can follow up (no fake live handoff).
         reply = reply.rstrip() + ESCALATION_EMAIL_PROMPT
+    if decision.outcome == "book" and not state.email:
+        # Qualified to book but no email yet: ask for it so the Book pipeline can run.
+        reply = reply.rstrip() + BOOK_EMAIL_PROMPT
 
     # Hand off the terminal CRM action off the reply path. It only fires once we have
     # the email (the deterministic gate above) — the chatbot has finished collecting.
