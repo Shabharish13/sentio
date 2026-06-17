@@ -119,4 +119,4 @@ See `integrations.md` for the full list with setup details.
 
 Yes — the best way to evaluate Sentio is to see it working with your actual data in a 30-minute tailored demo. Your AE will connect the demo environment to a sample of your integration data (with your permission) so you see health scores for your real accounts, not a fictional dataset.
 
-Request a demo at sentio.io/demo or ask to schedule one through the chat on this page.
+Ask to schedule one through the chat on this page - our team will reach out to set up a tailored session with your actual account data.
