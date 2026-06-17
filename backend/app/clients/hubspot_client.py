@@ -71,9 +71,7 @@ class HubSpotClient:
     def upsert_deal(self, name: str, stage: str, contact_id: str,
                     priority: str | None = None, amount: float | None = None) -> str:
         props: dict = {"dealstage": stage, "pipeline": self._pipeline}
-        if priority:
-            props["priority"] = priority
-        if amount is not None:
+        if amount:
             props["amount"] = str(int(float(amount)))
 
         existing = self._find_deal_id(name)

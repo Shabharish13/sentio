@@ -97,6 +97,19 @@ def build_record(form: dict, org: dict, person: dict) -> dict:
     }
 
 
+_HS_EMPLOYEE_BUCKETS = [
+    (5, "1-5"), (25, "5-25"), (50, "25-50"),
+    (100, "50-100"), (500, "100-500"), (1000, "500-1000"),
+]
+
+
+def _hs_numemployees(count: int) -> str:
+    for ceiling, label in _HS_EMPLOYEE_BUCKETS:
+        if count <= ceiling:
+            return label
+    return "1000+"
+
+
 def contact_props(form: dict, org: dict | None = None) -> dict:
     o = _org(org or {})
     props: dict = {
@@ -110,7 +123,7 @@ def contact_props(form: dict, org: dict | None = None) -> dict:
         props["annualrevenue"] = str(int(float(revenue)))
     employees = o.get("estimated_num_employees")
     if employees:
-        props["numemployees"] = str(employees)
+        props["numemployees"] = _hs_numemployees(int(employees))
     industry = o.get("industry")
     if industry:
         props["industry"] = industry
