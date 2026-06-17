@@ -8,16 +8,14 @@ Take-home interview assignment for Docket AI (Customer Success Program Manager r
 
 ## Canonical Docs
 
-All assignment artifacts live in `assignment/`:
-
-- **`assignment/Solution-Design-Document.md`** — primary build spec. All architecture, agent logic, workflow, tools, and KB definitions live here. This is the source of truth.
-- **`assignment/sentio-company-profile.md`** — fictional company profile. ICP scoring weights, buyer personas, research triggers, pricing, integrations, competitive positioning. Referenced throughout the build.
-- **`assignment/Agentic_Marketing_Assessment.md`** — original brief. Read-only reference.
+- **`Solution-Design-Document.md`** — primary build spec. All architecture, agent logic, workflow, tools, and KB definitions live here. This is the source of truth.
+- **`sentio-company-profile.md`** — fictional company profile. ICP scoring weights, buyer personas, research triggers, pricing, integrations, competitive positioning. Referenced throughout the build.
+- **`Agentic_Marketing_Assessment.md`** — original brief. Read-only reference.
 - **`archive/`** — superseded research docs. Do not reference at any cost.
 
 ## Fictional Company: Sentio
 
-AI-powered customer health scoring and churn prediction platform for B2B SaaS companies. "See churn before your customers do." All product, ICP, pricing, and persona details are in `assignment/sentio-company-profile.md`.
+AI-powered customer health scoring and churn prediction platform for B2B SaaS companies. "See churn before your customers do." All product, ICP, pricing, and persona details are in `sentio-company-profile.md`.
 
 ## What We're Building
 
@@ -64,4 +62,4 @@ Both paths → HubSpot CRM (deduped by email)
 - Keep prompts visible and editable — evaluation includes "clean prompts"
 - Every agent output must be traceable to real inputs
 - Apollo responses cached to local JSON — protect the 50 credit/month free tier limit
-- ICP scoring reads from CSV (built from assignment/sentio-company-profile.md), not hardcoded values
+- ICP scoring reads from CSV (built from sentio-company-profile.md), not hardcoded values
